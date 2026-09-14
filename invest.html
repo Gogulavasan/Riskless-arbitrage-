@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Investment Calculator — Arbitrage Insights</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="theme.css">
+<script src="engine.js"></script>
+<style>
+  .form{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px} @media(max-width:700px){.form{grid-template-columns:1fr}}
+  .form .row{grid-template-columns:1fr 170px}
+  .money{font:700 30px/1.1 var(--disp)} .tile.wrapv .val{white-space:normal;font-size:17px}
+  .rank{display:grid;gap:8px} .rank .r{display:grid;grid-template-columns:210px 1fr 120px auto;gap:10px;align-items:center;font:12px var(--mono)} @media(max-width:700px){.rank .r{grid-template-columns:1fr 1fr}}
+  .rank .r .nm{color:var(--ink);font-family:var(--body)}
+  .matrix td.cell{font-family:var(--mono);font-size:12px} .matrix td.pos{color:var(--cyan);text-shadow:0 0 8px rgba(0,245,212,.4)} .matrix td.neg{color:var(--magenta)} .matrix td.best{outline:1px solid var(--amber);outline-offset:-1px}
+  .target{display:grid;grid-template-columns:1fr 170px;gap:8px;align-items:center}
+  .wfmini{display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font:12px var(--mono)} .wfmini .k{color:var(--mute);font-family:var(--body)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav">
+  <a class="brand" href="index.html">ARBITRAGE <span>INSIGHTS</span></a>
+  <a class="item" href="index.html">Home</a>
+  <a class="item" href="calculator.html">CIRP Calculator</a>
+  <a class="item" href="invest.html" aria-current="page">Investment Calculator</a>
+  <a class="item" href="dashboard.html">Dashboard</a>
+  <a class="item" href="powerbi.html">Power BI</a>
+  <a class="item" href="https://github.com/Gogulavasan/Riskless-arbitrage-">GitHub</a>
+</nav>
+  <div>
+    <h1 class="page">INVESTMENT <span>CALCULATOR</span></h1>
+    <p class="lede">How much capital, into which pair, from which country — and what is left <b>after tax</b>? Pick a trade and a jurisdiction; the engine runs the covered-interest round trip at your size, then compares every country side by side. Tax rates are illustrative placeholders — verify before acting.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Your trade</h2>
+    <div class="form">
+      <div class="row"><label for="capital">Capital to deploy<small>Notional put into the trade (borrowed or your own — same maths). Shown in the currency you borrow for the chosen pair.</small></label><input id="capital" type="number" step="any" value="1000000"></div>
+      <div class="row"><label for="pairSel">Currency pair<small>Illustrative Sep-2026 levels, 3-month tenor.</small></label><select id="pairSel"></select></div>
+      <div class="row"><label for="costSel">Who are you in the market?<small>Sets bid-ask, funding spread, margin, fees.</small></label><select id="costSel"></select></div>
+      <div class="row"><label for="country">Tax country</label><select id="country"></select></div>
+      <div class="row"><label for="entity">Entity type</label><select id="entity"><option value="individual">Individual</option><option value="company">Company</option></select></div>
+      <div class="row"><label for="target">Target after-tax profit<small>The calculator solves for the capital needed to reach it.</small></label><input id="target" type="number" step="any" value="1000"></div>
+    </div>
+    <p style="margin:12px 0 0"><button class="primary" id="go">Calculate</button></p>
+  </div>
+
+  <section class="kpis" id="kpis"></section>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>Where does your capital go?<small id="wfsub"></small></h2>
+      <div class="wfmini" id="wf"></div>
+      <div id="flags"></div>
+    </div>
+    <div class="panel">
+      <h2>After tax in <span id="ctryName"></span><small>every treatment that could apply to your entity type · best is used for the headline</small></h2>
+      <div class="rank" id="regimes"></div>
+      <div class="flag" style="margin-top:12px"><div class="target"><span>Capital needed for the target after-tax profit (best treatment)</span><span class="money" id="needed" style="font-size:20px;text-align:right"></span></div><div class="note" id="neededNote"></div></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>Which country keeps the most?<small>same trade, same capital — after-tax profit under each country's best treatment for your entity</small></h2>
+      <div class="rank" id="countries"></div>
+    </div>
+    <div class="panel">
+      <h2>Pair × country — after-tax return<small>bp of capital, annualised · your cost profile, entity's best treatment · amber outline = best cell</small></h2>
+      <div class="tscroll"><table class="matrix" id="matrix"></table></div>
+      <p class="note">A positive cell is rare by construction: in liquid pairs covered-interest arbitrage is arbitraged away; the bank cost profile is the only one with realistic access to it. USD/INR's large gap is a capital-control artefact (red-flagged), not free money.</p>
+    </div>
+  </div>
+  <p class="foot">Not investment or tax advice. Engine: fx_arbitrage.py · github.com/Gogulavasan/Riskless-arbitrage-</p>
+</div>
+
+<script>
+const $ = id => document.getElementById(id), F = FX.fmt;
+FX.PAIRS.forEach((p, i) => { const o = document.createElement("option"); o.value = i; o.textContent = `${p.pair} — ${p.note}`; $("pairSel").appendChild(o); });
+Object.entries(FX.COSTS).forEach(([k, c]) => { const o = document.createElement("option"); o.value = k; o.textContent = c.name; $("costSel").appendChild(o); });
+FX.COUNTRIES.forEach(c => { const o = document.createElement("option"); o.value = c; o.textContent = c; $("country").appendChild(o); });
+$("pairSel").onchange = () => { $("costSel").value = FX.PAIRS[$("pairSel").value].cost; calc(); };
+["costSel", "country", "entity"].forEach(id => $(id).onchange = calc);
+$("go").onclick = calc;
+
+function regimesFor(country, entity) {
+  let r = FX.REGIMES.filter(t => t[1] === country && t[2] === entity);
+  return r.length ? r : FX.REGIMES.filter(t => t[1] === country);
+}
+function evalTrade(pairIdx, costKey, N) { return FX.run(FX.PAIRS[pairIdx], FX.COSTS[costKey], N); }
+function afterTaxRows(r, country, entity) {
+  return regimesFor(country, entity).map(t => { const tx = FX.taxDue(r.full, t), at = r.net - tx; return { t, tx, at, v: FX.verdictTax(r.net, at) }; }).sort((a, b) => b.at - a.at);
+}
+function calc() {
+  const N = parseFloat($("capital").value), pi = +$("pairSel").value, ck = $("costSel").value, country = $("country").value, entity = $("entity").value, target = parseFloat($("target").value);
+  if (!(N > 0)) { $("kpis").innerHTML = '<div class="flag hot">Enter a positive capital amount.</div>'; return; }
+  const r = evalTrade(pi, ck, N), m = r.m, ccy = r.ccy, rows = afterTaxRows(r, country, entity), best = rows[0];
+  const days = m.days, basis = r.dir === "borrow_quote" ? m.bq : m.bb, ann = x => x / N * basis / days;
+  const vcls = best.at > 1e-6 ? "good" : (r.net > 1e-6 ? "bad" : (r.verdict === "No arbitrage" ? "warn" : "bad"));
+  $("kpis").innerHTML = [
+    ["Capital deployed", `${F.n0(N)} ${ccy}`, r.dir === "borrow_quote" ? `borrow ${m.quote} → buy ${m.base} → sell ${m.base} fwd` : `borrow ${m.base} → sell spot → buy ${m.base} fwd`, "wrapv"],
+    ["Gross profit", `${F.n2(r.gross)}`, `${ccy} · mid, risk-free`, r.gross > 0 ? "good" : "bad"],
+    ["After costs", `${F.n2(r.net)}`, `${F.sgn((ann(r.net) * 1e4).toFixed(2))} bp annualised`, r.net > 0 ? "good" : "bad"],
+    ["Tax (best treatment)", `${F.n2(best.tx)}`, best.t[3].split(" –")[0].slice(0, 34), best.tx > 0 ? "warn" : ""],
+    ["After tax", `${F.n2(best.at)}`, `${F.sgn((ann(best.at) * 1e4).toFixed(2))} bp annualised · ${F.sgn((ann(best.at) * 100).toFixed(4))}% p.a.`, best.at > 0 ? "good" : "bad"],
+    ["Verdict", best.v === "Profitable after tax" ? "Keeps money after tax" : (best.v === "TAX FLIPS IT TO A LOSS" ? "Tax flips it to a loss" : r.verdict), `${m.pair} · ${FX.COSTS[ck].name} · ${country}`, vcls + " verdict"],
+  ].map(([l, v, s, c]) => `<div class="tile ${c}"><div class="lab">${l}</div><div class="val">${v}</div><div class="sub">${s}</div></div>`).join("");
+
+  $("wfsub").textContent = `${m.pair}: S ${F.px(m.spot, m.pair)} → F_fair ${F.px(r.a.f, m.pair)} vs F_market ${F.px(m.fwd, m.pair)} (${F.sgn(r.a.bps.toFixed(2))} bp) · per ${F.n0(N)} ${ccy}`;
+  const wfRows = r.wf.map(([l, v], i) => [l, v, i ? v - r.wf[i - 1][1] : null]).concat([[`tax — ${best.t[3].split(" –")[0]}`, best.at, -best.tx]]);
+  $("wf").innerHTML = wfRows.map(([l, v, d]) => `<span class="k">${l}</span><div class="bar"><i style="${v >= 0 ? `left:50%;width:${Math.min(50, Math.abs(v) / Math.max(Math.abs(r.gross), Math.abs(r.net), Math.abs(best.at), 1e-9) * 50)}%;background:var(--cyan)` : `right:50%;width:${Math.min(50, Math.abs(v) / Math.max(Math.abs(r.gross), Math.abs(r.net), Math.abs(best.at), 1e-9) * 50)}%;background:var(--magenta)`}"></i></div><span>${F.n2(v)}${d === null ? "" : ` <span style="color:var(--mute)">(${F.sgn(F.n2(d))})</span>`}</span>`).join("");
+  $("flags").innerHTML = r.a.flags.map(([k, t]) => `<div class="flag ${k}">${t}</div>`).join("") || `<div class="flag ok">Sanity: parity direction consistent; gap within the range seen in liquid markets.</div>`;
+
+  $("ctryName").textContent = country;
+  $("regimes").innerHTML = rows.map(x => { const cls = x.v === "Profitable after tax" ? "good" : (x.v === "TAX FLIPS IT TO A LOSS" ? "bad" : "neu"); return `<div class="r"><span class="nm">${x.t[3]}<br><span class="note">${x.t[8]}</span></span><div class="bar"><i style="${x.at >= 0 ? `left:50%;width:${Math.abs(x.at) / Math.max(...rows.map(y => Math.abs(y.at)), 1e-9) * 50}%;background:var(--cyan)` : `right:50%;width:${Math.abs(x.at) / Math.max(...rows.map(y => Math.abs(y.at)), 1e-9) * 50}%;background:var(--magenta)`}"></i></div><span>${F.n2(x.at)} ${ccy}</span><span class="pill ${cls}">${x.v}</span></div>`; }).join("");
+  if (best.at > 1e-9) { const need = target / (best.at / N); $("needed").textContent = `${F.n0(need)} ${ccy}`; $("neededNote").textContent = `After-tax profit scales with size (every leg is proportional to notional): ${F.n2(target)} ${ccy} target ÷ ${(best.at / N * 100).toFixed(5)}% after-tax return per ${days} days.`; }
+  else { $("needed").textContent = "not reachable"; $("neededNote").textContent = "After-tax profit is zero or negative for this trade, so no amount of capital reaches the target — size only scales the loss."; }
+
+  // country ranking
+  const cr = FX.COUNTRIES.map(c => { const rr = afterTaxRows(r, c, entity)[0]; return { c, ...rr }; }).sort((a, b) => b.at - a.at);
+  const mx = Math.max(...cr.map(x => Math.abs(x.at)), 1e-9);
+  $("countries").innerHTML = cr.map((x, i) => { const cls = x.v === "Profitable after tax" ? "good" : (x.v === "TAX FLIPS IT TO A LOSS" ? "bad" : "neu"); return `<div class="r"><span class="nm">${i + 1}. ${x.c}<br><span class="note">${x.t[3].split(" –")[0]} · tax ${F.n2(x.tx)}</span></span><div class="bar"><i style="${x.at >= 0 ? `left:50%;width:${Math.abs(x.at) / mx * 50}%;background:var(--cyan)` : `right:50%;width:${Math.abs(x.at) / mx * 50}%;background:var(--magenta)`}"></i></div><span>${F.n2(x.at)} ${ccy}</span><span class="pill ${cls}">${x.v}</span></div>`; }).join("");
+
+  // pair x country matrix (bp annualised of capital, after tax, best treatment)
+  const cells = FX.PAIRS.map((p, i) => { const rr = evalTrade(i, ck, N); return FX.COUNTRIES.map(c => { const b = afterTaxRows(rr, c, entity)[0]; const bas = rr.dir === "borrow_quote" ? rr.m.bq : rr.m.bb; return { v: b.at / N * bas / rr.m.days * 1e4, ccy: rr.ccy }; }); });
+  const bestV = Math.max(...cells.flat().map(x => x.v));
+  let h = `<tr><th>Pair</th>${FX.COUNTRIES.map(c => `<th>${c.replace(" (Germany-style)", "")}</th>`).join("")}</tr>`;
+  cells.forEach((row, i) => { const fl = FX.analyse(FX.prep(FX.PAIRS[i])).flags.length; h += `<tr><td>${FX.PAIRS[i].pair}${fl ? ' <span class="pill warn" title="red-flagged gap">⚠</span>' : ""}<br><span class="note">${row[0].ccy} notional</span></td>${row.map(x => `<td class="cell ${x.v > 0 ? "pos" : "neg"}${x.v === bestV ? " best" : ""}">${F.sgn(x.v.toFixed(2))} bp</td>`).join("")}</tr>`; });
+  $("matrix").innerHTML = h;
+}
+calc();
+</script>
+</body>
+</html>

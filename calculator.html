@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CIRP Calculator — Arbitrage Insights</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="theme.css">
+<script src="engine.js"></script>
+<style>
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  .step{margin:0 0 8px} .step b{color:var(--cyan)} .cfa{font-size:11px;color:var(--violet)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav">
+  <a class="brand" href="index.html">ARBITRAGE <span>INSIGHTS</span></a>
+  <a class="item" href="index.html">Home</a>
+  <a class="item" href="calculator.html" aria-current="page">CIRP Calculator</a>
+  <a class="item" href="invest.html">Investment Calculator</a>
+  <a class="item" href="dashboard.html">Dashboard</a>
+  <a class="item" href="powerbi.html">Power BI</a>
+  <a class="item" href="https://github.com/Gogulavasan/Riskless-arbitrage-">GitHub</a>
+</nav>
+  <div>
+    <h1 class="page">CIRP <span>CALCULATOR</span></h1>
+    <p class="lede">Enter a pair, tenor, spot, market forward and both risk-free rates. The engine computes the covered-interest-parity forward, the mispricing, the arbitrage direction, then runs the round trip through itemised real-world costs and two tax regimes. <b>Covered</b> parity only — no exchange-rate risk is taken.</p>
+  </div>
+
+  <div class="presets" id="presets"></div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>1 · Market inputs</h2>
+      <div class="row"><label for="pair">Pair (BASE/QUOTE)<small>S = units of QUOTE per 1 BASE. CFA "domestic" = quote.</small></label><input id="pair" value="EUR/USD"></div>
+      <div class="row"><label for="days">Tenor (days)</label><input id="days" type="number" value="91"></div>
+      <div class="row"><label for="spot">S — spot mid</label><input id="spot" type="number" step="any" value="1.16"></div>
+      <div class="row"><label for="fwd">F_market — forward mid</label><input id="fwd" type="number" step="any" value="1.164966"></div>
+      <div class="row"><label for="ib">i_base (foreign), % p.a.</label><input id="ib" type="number" step="any" value="2.20"></div>
+      <div class="row"><label for="iq">i_quote (domestic), % p.a.</label><input id="iq" type="number" step="any" value="3.80"></div>
+      <div class="row"><label for="bb">Day-count basis, base ccy<small>ACT/360: USD EUR JPY · ACT/365: GBP INR. CFA L1 uses 360 for both.</small></label><select id="bb"><option>360</option><option>365</option></select></div>
+      <div class="row"><label for="bq">Day-count basis, quote ccy</label><select id="bq"><option>360</option><option>365</option></select></div>
+      <div class="row"><label for="N">Notional borrowed</label><input id="N" type="number" step="any" value="1000000"></div>
+    </div>
+    <div class="panel">
+      <h2>2 · Real-world costs</h2>
+      <div class="row"><label for="ss">Spot bid-ask (full width, price units)</label><input id="ss" type="number" step="any" value="0.00005"></div>
+      <div class="row"><label for="fs">Forward bid-ask (full width)</label><input id="fs" type="number" step="any" value="0.0001"></div>
+      <div class="row"><label for="bs">Borrowing spread over risk-free, % p.a.</label><input id="bs" type="number" step="any" value="0.05"></div>
+      <div class="row"><label for="ds">Deposit haircut below risk-free, % p.a.</label><input id="ds" type="number" step="any" value="0.02"></div>
+      <div class="row"><label for="mp">Forward initial margin, % of notional</label><input id="mp" type="number" step="any" value="0"></div>
+      <div class="row"><label for="mf">Margin funding cost, % p.a.</label><input id="mf" type="number" step="any" value="0"></div>
+      <div class="row"><label for="fee">Fees, bps of notional</label><input id="fee" type="number" step="any" value="0.1"></div>
+      <h2 style="margin-top:14px">3 · Tax regimes (placeholders)</h2>
+      <div class="row"><label for="taxA">Regime A</label><select id="taxA"></select></div>
+      <div class="row"><label for="taxB">Regime B</label><select id="taxB"></select></div>
+      <p class="note" style="margin:10px 0 0">Every tax rate is an illustrative placeholder showing the <i>shape</i> of a regime. Verify current law before relying on any after-tax figure.</p>
+      <p style="margin:12px 0 0"><button class="primary" id="go">Compute</button></p>
+    </div>
+  </div>
+
+  <div id="out"></div>
+  <p class="foot">Same maths as fx_arbitrage.py and FX_Arbitrage_Engine.xlsx (cross-checked to the cent).</p>
+</div>
+
+<script>
+const $ = id => document.getElementById(id), num = id => parseFloat($(id).value), F = FX.fmt;
+for (const sel of ["taxA","taxB"]) for (const r of FX.REGIMES) { const o = document.createElement("option"); o.value = r[0]; o.textContent = `${r[1]} — ${r[3]}`; $(sel).appendChild(o); }
+const PRESETS = [
+  { name: "EUR/USD · bank costs · US tax", p: FX.PAIRS[0], taxA: "US-988", taxB: "US-1256" },
+  { name: "GBP/USD · at parity · Europe", p: FX.PAIRS[1], taxA: "EU-abg", taxB: "EU-biz" },
+  { name: "USD/JPY · retail costs · Korea", p: FX.PAIRS[2], taxA: "KR-wht", taxB: "KR-agg" },
+  { name: "USD/INR · onshore costs · India", p: FX.PAIRS[3], taxA: "IN-ind-spec", taxB: "IN-ind-pool" },
+  { name: "Inconsistent input demo", p: { ...FX.PAIRS[2], fwd: 161 }, taxA: "US-988", taxB: "US-1256" },
+];
+PRESETS.forEach(pr => { const b = document.createElement("button"); b.textContent = pr.name; b.onclick = () => load(pr); $("presets").appendChild(b); });
+function load(pr) {
+  const p = pr.p, c = FX.COSTS[p.cost];
+  $("pair").value = p.pair; $("days").value = p.days; $("spot").value = p.spot; $("fwd").value = p.fwd; $("ib").value = p.ib * 100; $("iq").value = p.iq * 100; $("bb").value = p.bb; $("bq").value = p.bq; $("N").value = 1e6;
+  $("ss").value = c.ss; $("fs").value = c.fs; $("bs").value = c.bs * 100; $("ds").value = c.ds * 100; $("mp").value = c.mp * 100; $("mf").value = c.mf * 100; $("fee").value = c.fee;
+  $("taxA").value = pr.taxA; $("taxB").value = pr.taxB; run();
+}
+function readInputs() {
+  const m = { pair: $("pair").value.trim().toUpperCase(), days: num("days"), spot: num("spot"), fwd: num("fwd"), ib: num("ib") / 100, iq: num("iq") / 100, bb: num("bb"), bq: num("bq") };
+  const c = { ss: num("ss"), fs: num("fs"), bs: num("bs") / 100, ds: num("ds") / 100, mp: num("mp") / 100, mf: num("mf") / 100, fee: num("fee") };
+  return { m, c, N: num("N") };
+}
+function run() {
+  const { m, c, N } = readInputs();
+  if (!/^[A-Z]{3}\/[A-Z]{3}$/.test(m.pair) || isNaN(m.spot) || isNaN(m.fwd)) { $("out").innerHTML = '<div class="flag hot">Enter the pair as BASE/QUOTE (e.g. EUR/USD) and numeric inputs.</div>'; return; }
+  const r = FX.run(m, c, N), a = r.a, mm = r.m, full = r.full, ccy = r.ccy;
+  const vcls = r.verdict === "Arbitrage survives costs" ? "good" : (r.verdict === "No arbitrage" ? "warn" : "bad");
+  let h = `<div class="panel">`;
+  if (a.flags.length) h += a.flags.map(([k, t]) => `<div class="flag ${k}">⚠ ${t}</div>`).join("") + "<br>";
+  h += `<p class="step"><b>Step 1 · Inputs.</b> S = ${F.px(mm.spot, mm.pair)} ${mm.quote} per ${mm.base}; F_market = ${F.px(mm.fwd, mm.pair)}; i_${mm.base} = ${F.pct(mm.ib)} (ACT/${mm.bb}, τ = ${mm.tb.toFixed(6)}); i_${mm.quote} = ${F.pct(mm.iq)} (ACT/${mm.bq}, τ = ${mm.tq.toFixed(6)}).</p>`;
+  h += `<p class="step"><b>Step 2 · CIRP implied forward.</b> <span class="cfa">[CFA L1: F = S(1+i_d·τ)/(1+i_f·τ)]</span><br><code>F_fair = ${F.px(mm.spot, mm.pair)} × (1 + ${F.pct(mm.iq)} × ${mm.tq.toFixed(6)}) / (1 + ${F.pct(mm.ib)} × ${mm.tb.toFixed(6)}) = ${F.px(a.f, mm.pair)}</code></p>`;
+  h += `<p class="step"><b>Step 3 · Compare.</b> <span class="cfa">[CFA L1: forward premium/discount = F/S − 1]</span><br>Premium/discount on ${mm.base}: market <b>${F.sgn(F.pct(a.pm, 5))}</b>, fair ${F.sgn(F.pct(a.pf, 5))} · Mispricing = F_market − F_fair = <b>${F.sgn(a.gap.toFixed(6))}</b> (${F.sgn(a.bps.toFixed(2))} bp annualised)</p>`;
+  const dtxt = a.dir === "none" ? "None — market forward equals CIRP forward within tolerance." : (a.dir === "borrow_quote" ? `Forward sells ${mm.base} too DEAR → borrow ${mm.quote}, buy ${mm.base} spot, invest ${mm.base}, SELL ${mm.base} forward.` : `Forward sells ${mm.base} too CHEAP → borrow ${mm.base}, sell ${mm.base} spot, invest ${mm.quote}, BUY ${mm.base} forward.`);
+  h += `<p class="step"><b>Step 4 · Direction.</b> <span class="cfa">[CFA L1: no-arbitrage principle]</span> ${dtxt}</p>`;
+  h += `<p class="step"><b>Step 5 · Cost waterfall</b> (per ${F.n2(N)} ${ccy} borrowed; Profit = Final amount − Amount owed)</p>`;
+  const maxabs = Math.max(...r.wf.map(x => Math.abs(x[1])), 1e-9);
+  h += `<div class="tscroll"><table><tr><th>Layer</th><th>Cumulative profit (${ccy})</th><th>Erosion</th><th style="width:30%"></th></tr>`;
+  r.wf.forEach(([l, v], i) => { const d = i ? v - r.wf[i - 1][1] : 0; const w = Math.abs(v) / maxabs * 50; h += `<tr><td>${l}</td><td>${F.n2(v)}</td><td>${i ? F.sgn(F.n2(d)) : ""}</td><td><div class="bar"><i style="${v >= 0 ? `left:50%;width:${w}%;background:var(--cyan)` : `right:50%;width:${w}%;background:var(--magenta)`}"></i></div></td></tr>`; });
+  h += `</table></div><p class="note">Final amount ${F.n2(full.final)} − Amount owed ${F.n2(full.owed)} = gross ${F.n2(full.gross)}; net after margin + fees ${F.n2(full.net)} · Net annualised on notional: ${F.sgn(r.netbp.toFixed(2))} bp</p>`;
+  h += `<p class="step"><b>Step 6 · Verdict after costs:</b> <span class="pill ${vcls}">${r.verdict}</span></p>`;
+  h += `<p class="step"><b>Step 6b · Tax layer.</b> Taxable pieces: interest earned ${F.n2(full.i_earn)} · interest paid ${F.n2(full.i_pay)} · margin + fees ${F.n2(full.margin + full.fees)} · FX result on principal ${F.sgn(F.n2(full.fx))}</p>`;
+  h += `<div class="tscroll"><table><tr><th>Regime</th><th>Tax</th><th>After-tax (${ccy})</th><th>Verdict</th></tr>`;
+  for (const id of ["taxA", "taxB"]) { const t = FX.REGIMES.find(x => x[0] === $(id).value); const tx = FX.taxDue(full, t), at = r.net - tx, v = FX.verdictTax(r.net, at); const cls = v === "Profitable after tax" ? "good" : (v === "TAX FLIPS IT TO A LOSS" ? "bad" : "neu");
+    h += `<tr><td><b>${t[1]}</b> — ${t[3]}<br><span class="note">${t[8]}</span></td><td>${F.n2(tx)}</td><td>${F.n2(at)}</td><td><span class="pill ${cls}">${v}</span></td></tr>`;
+    if (v === "TAX FLIPS IT TO A LOSS") h += `<tr><td colspan="4"><div class="flag hot">★ Insight: this regime taxes the profitable leg but ring-fences the loss-making leg — a pre-tax profit becomes an after-tax loss.</div></td></tr>`; }
+  h += `</table></div><p class="note">Tax rates are illustrative placeholders. Verify current law before relying on any after-tax figure.</p>`;
+  h += `<p class="step"><b>Step 7 · Sanity.</b> ${a.flags.length ? "See flags above." : "Parity direction consistent; gap within the range seen in liquid markets."} In liquid pairs true post-cost CIA is rare and tiny — large, frequent "opportunities" mean bad inputs or cost assumptions.</p></div>`;
+  $("out").innerHTML = h;
+}
+$("go").onclick = run; run();
+</script>
+</body>
+</html>

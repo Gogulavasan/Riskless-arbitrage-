@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Power BI Model — Arbitrage Insights</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="theme.css">
+<style>
+  .embed{position:relative;width:100%;aspect-ratio:16/9;max-width:100%;background:var(--card2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .embed iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .setup{display:grid;gap:8px;font-size:13px} .setup li{margin-bottom:4px}
+  .files{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+  .files a{display:grid;gap:4px;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:12px;text-decoration:none;color:var(--ink)} .files a:hover{border-color:var(--cyan)} .files a b{font:600 12px var(--mono);color:var(--cyan)} .files a span{font-size:12px;color:var(--mute)}
+  .paste{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav">
+  <a class="brand" href="index.html">ARBITRAGE <span>INSIGHTS</span></a>
+  <a class="item" href="index.html">Home</a>
+  <a class="item" href="calculator.html">CIRP Calculator</a>
+  <a class="item" href="invest.html">Investment Calculator</a>
+  <a class="item" href="dashboard.html">Dashboard</a>
+  <a class="item" href="powerbi.html" aria-current="page">Power BI</a>
+  <a class="item" href="https://github.com/Gogulavasan/Riskless-arbitrage-">GitHub</a>
+</nav>
+  <div>
+    <h1 class="page">POWER BI <span>MODEL</span></h1>
+    <p class="lede">The same engine, served as a Power BI report. When the report is published to the web from Power BI Service, its embed URL goes in the box below (or in <code>POWERBI_EMBED_URL</code> at the top of this page's script) and it renders here. Until then the neon HTML dashboard stands in — it is computed from the identical data.</p>
+  </div>
+
+  <section class="panel">
+    <h2 id="embedTitle">Report</h2>
+    <div class="embed"><iframe id="frame" src="dashboard.html" title="Arbitrage Insights report" allowfullscreen></iframe></div>
+    <div class="paste"><input id="url" placeholder="Paste the Power BI 'Publish to web' embed URL (https://app.powerbi.com/view?r=…)"><button class="primary" id="use">Use this report</button></div>
+    <p class="note" id="status"></p>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <h2>Publish the report in three steps</h2>
+      <ol class="setup">
+        <li>Build the report in Power BI Desktop from the kit below (≈20 minutes; <code>BUILD_GUIDE.md</code> has the exact page layout and every measure).</li>
+        <li>Publish to Power BI Service → open the report → <b>File → Embed report → Publish to web (public)</b> → copy the link that starts with <code>https://app.powerbi.com/view?r=</code>.</li>
+        <li>Paste it above, or set <code>POWERBI_EMBED_URL</code> in <code>docs/powerbi.html</code> and push — every visitor then sees the live report. (Publish-to-web makes the report public; the data here is illustrative, so that is fine.)</li>
+      </ol>
+    </section>
+    <section class="panel">
+      <h2>Power BI kit<small>everything that goes into the .pbix</small></h2>
+      <div class="files">
+        <a href="https://github.com/Gogulavasan/Riskless-arbitrage-/tree/main/powerbi/data"><b>data/*.csv</b><span>pairs_summary, cost_waterfall, tax_results, tax_regimes, breakeven_grid (744 rows), trace_steps</span></a>
+        <a href="https://github.com/Gogulavasan/Riskless-arbitrage-/blob/main/powerbi/theme_neon_arbitrage.json"><b>theme_neon_arbitrage.json</b><span>Neon theme: near-black canvas, cyan / magenta / amber / violet data colours, glowing cards</span></a>
+        <a href="https://github.com/Gogulavasan/Riskless-arbitrage-/blob/main/powerbi/measures.dax"><b>measures.dax</b><span>KPI, verdict-colour, waterfall, tax-flip, break-even and formula-callout measures</span></a>
+        <a href="https://github.com/Gogulavasan/Riskless-arbitrage-/blob/main/powerbi/BUILD_GUIDE.md"><b>BUILD_GUIDE.md</b><span>Load order, relationships, page layout, conditional formatting, fancy extras</span></a>
+      </div>
+    </section>
+  </div>
+  <p class="foot">Regenerate the CSVs any time with <code>python powerbi/export_powerbi_data.py</code>.</p>
+</div>
+<script>
+const POWERBI_EMBED_URL = "";   // ← paste the Publish-to-web URL here to make it permanent
+const $ = id => document.getElementById(id);
+function isPbi(u) { try { const x = new URL(u); return x.hostname === "app.powerbi.com" && x.pathname === "/view"; } catch { return false; } }
+function apply(u, persist) {
+  if (!isPbi(u)) { $("status").textContent = "That is not a Power BI publish-to-web URL (expected https://app.powerbi.com/view?r=…)."; return; }
+  $("frame").src = u; $("embedTitle").textContent = "Power BI report (live)"; $("status").textContent = "Showing the Power BI report.";
+  if (persist) { try { localStorage.setItem("pbiEmbedUrl", u); } catch {} }
+}
+let saved = ""; try { saved = localStorage.getItem("pbiEmbedUrl") || ""; } catch {}
+if (POWERBI_EMBED_URL) apply(POWERBI_EMBED_URL, false); else if (saved) { $("url").value = saved; apply(saved, false); }
+else $("status").textContent = "No Power BI embed URL set yet — showing the HTML dashboard built from the same data.";
+$("use").onclick = () => apply($("url").value.trim(), true);
+</script>
+</body>
+</html>
