@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arbitrage Insights</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="theme.css">
+<style>
+  :root{
+    --ground:#070A12; --card:#0F1626; --card2:#131C30; --line:#1F2B45; --ink:#E6F1FF; --mute:#8FA3BF;
+    --cyan:#00F5D4; --magenta:#F15BB5; --amber:#FEE440; --violet:#9B5DE5; --blue:#00BBF9;
+    --glow-c:0 0 18px rgba(0,245,212,.35); --glow-m:0 0 18px rgba(241,91,181,.35); --glow-a:0 0 18px rgba(254,228,64,.35);
+    --disp:"Orbitron","IBM Plex Sans",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font:14px/1.45 var(--body);padding-block:0 40px;padding-inline:16px;
+       background-image:radial-gradient(1200px 500px at 20% -10%,rgba(155,93,229,.18),transparent 60%),radial-gradient(900px 400px at 100% 0,rgba(0,245,212,.10),transparent 60%);}
+  .wrap{max-width:1240px;margin:0 auto;display:grid;gap:14px}
+  /* header */
+  .hdr{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:end;border-bottom:1px solid var(--line);padding-bottom:12px}
+  .hdr h1{font:900 26px/1.1 var(--disp);letter-spacing:.06em;margin:0;color:#fff;text-shadow:0 0 14px rgba(0,245,212,.55),0 0 34px rgba(0,245,212,.25)}
+  .hdr h1 span{color:var(--cyan)}
+  .hdr .q{margin:6px 0 0;color:var(--mute);font-size:13px}
+  .controls{display:flex;gap:18px;flex-wrap:wrap;align-items:end}
+  .ctl{display:grid;gap:4px}
+  .ctl label{font:500 10px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+  .ctl label b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--cyan);color:#041;font:700 11px var(--disp);margin-right:6px}
+  .seg{display:flex;gap:4px;flex-wrap:wrap}
+  .seg button{background:var(--card);color:var(--mute);border:1px solid var(--line);padding:6px 10px;border-radius:6px;font:500 12px var(--mono);cursor:pointer}
+  .seg button[aria-pressed="true"]{color:#041;background:var(--cyan);border-color:var(--cyan);box-shadow:var(--glow-c)}
+  .seg button:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  select{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:12px var(--body);max-width:320px}
+  /* tiles */
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+  @media(max-width:980px){.kpis{grid-template-columns:repeat(3,1fr)}} @media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .tile{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:4px;min-width:0}
+  .tile .lab{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+  .tile .val{font:700 21px/1.1 var(--disp);color:var(--cyan);text-shadow:var(--glow-c);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tile .sub{font:11px var(--mono);color:var(--mute)}
+  .tile.verdict .val{font-size:15px;white-space:normal;line-height:1.25}
+  .tile.good .val{color:var(--cyan);text-shadow:var(--glow-c)} .tile.bad .val{color:var(--magenta);text-shadow:var(--glow-m)} .tile.warn .val{color:var(--amber);text-shadow:var(--glow-a)}
+  /* panels */
+  .grid2{display:grid;grid-template-columns:1.25fr 1fr;gap:14px} @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+  .panel h2{font:600 13px var(--body);margin:0 0 10px;color:var(--ink)} .panel h2 small{display:block;font:11px var(--mono);color:var(--mute);margin-top:2px}
+  svg{display:block;width:100%;height:auto} svg text{font-family:var(--mono);font-size:10px;fill:var(--mute)}
+  .flag{margin-top:10px;padding:8px 10px;border-left:3px solid var(--amber);background:rgba(254,228,64,.07);border-radius:4px;font-size:12px}
+  .flag.hot{border-color:var(--magenta);background:rgba(241,91,181,.08)}
+  /* tax bars */
+  .tax{display:grid;gap:10px} .tax .row{display:grid;grid-template-columns:1fr;gap:4px}
+  .tax .name{font-size:12px} .tax .name small{color:var(--mute);display:block;font-family:var(--mono);font-size:11px}
+  .bars{display:grid;grid-template-columns:96px 1fr 110px;gap:8px;align-items:center;font:12px var(--mono)}
+  .bars .track{height:12px;background:var(--card2);border-radius:3px;position:relative;overflow:hidden}
+  .bars .track i{position:absolute;top:0;bottom:0;border-radius:3px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font:600 11px var(--body)}
+  .pill.good{background:rgba(0,245,212,.14);color:var(--cyan)} .pill.bad{background:rgba(241,91,181,.16);color:var(--magenta)} .pill.neu{background:rgba(143,163,191,.15);color:var(--mute)}
+  /* heatmap */
+  .heat{display:grid;grid-template-columns:auto 1fr;gap:6px;font:10px var(--mono);color:var(--mute)}
+  .heat .ylab{display:grid;align-content:space-between;text-align:right;padding-block:2px}
+  .cells{display:grid;grid-template-columns:repeat(6,1fr);gap:2px}
+  .cells div{height:9px;border-radius:2px;background:var(--card2)}
+  .cells div.on{background:var(--cyan);box-shadow:0 0 6px rgba(0,245,212,.5)} .cells div.zero{outline:1px solid var(--amber);outline-offset:-1px}
+  .xlab{display:grid;grid-template-columns:repeat(6,1fr);text-align:center;margin-top:4px;font:10px var(--mono);color:var(--mute)}
+  .legend{display:flex;gap:14px;font:11px var(--mono);color:var(--mute);margin-top:8px;flex-wrap:wrap} .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+  /* trace */
+  .trace{display:grid;gap:6px;font:12px var(--mono)} .trace .r{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+  .trace .r:last-child{border-bottom:0} .trace .k{color:var(--mute)} .trace .v{color:var(--ink);font-variant-numeric:tabular-nums}
+  .trace .arrow{color:var(--violet)}
+  .formulas{display:grid;gap:6px;margin-top:10px;font:11px var(--mono);color:var(--mute)} .formulas code{color:var(--amber);font-family:inherit}
+  .foot{color:var(--mute);font-size:11px;font-family:var(--mono)}
+  @media(prefers-reduced-motion:no-preference){.tile .val{transition:color .3s}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <nav class="nav">
+  <a class="brand" href="index.html">ARBITRAGE <span>INSIGHTS</span></a>
+  <a class="item" href="index.html">Home</a>
+  <a class="item" href="calculator.html">CIRP Calculator</a>
+  <a class="item" href="invest.html">Investment Calculator</a>
+  <a class="item" href="dashboard.html" aria-current="page">Dashboard</a>
+  <a class="item" href="powerbi.html">Power BI</a>
+  <a class="item" href="https://github.com/Gogulavasan/Riskless-arbitrage-">GitHub</a>
+</nav>
+  <header class="hdr">
+    <div>
+      <h1>ARBITRAGE <span>INSIGHTS</span></h1>
+      <p class="q">Does covered interest arbitrage survive the real world? Spot → CIRP forward → market forward → costs → tax.</p>
+    </div>
+    <div class="controls">
+      <div class="ctl"><label><b>1</b>Select a pair</label><div class="seg" id="pairSeg" role="group" aria-label="Currency pair"></div></div>
+      <div class="ctl"><label for="regime"><b>2</b>Select a tax regime</label><select id="regime"></select></div>
+    </div>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <div class="grid2">
+    <section class="panel">
+      <h2>How much does each friction erode?<small id="wfsub"></small></h2>
+      <div id="wf"></div>
+      <div id="flags"></div>
+    </section>
+    <section class="panel">
+      <h2>Does tax flip it?<small>after-cost net vs after-tax, both regimes for this pair · rates are placeholders</small></h2>
+      <div class="tax" id="tax"></div>
+    </section>
+  </div>
+
+  <div class="grid2">
+    <section class="panel">
+      <h2>Where is the break-even frontier?<small>net profit &gt; 0 (cyan) across mispricing × borrow/lend spread · other costs as in this pair's profile</small></h2>
+      <div class="heat"><div class="ylab" id="ylab"></div><div><div class="cells" id="cells"></div><div class="xlab" id="xlab"></div></div></div>
+      <div class="legend"><span><i style="background:var(--cyan)"></i>arbitrage survives</span><span><i style="background:var(--card2)"></i>cost-negative</span><span><i style="outline:1px solid var(--amber);outline-offset:-1px"></i>zero mispricing row</span><span>x: borrow spread bp (deposit haircut = half)</span></div>
+    </section>
+    <section class="panel">
+      <h2>Show your work<small>every number traces back to the inputs</small></h2>
+      <div class="trace" id="trace"></div>
+      <div class="formulas">
+        <div><code>F = S × (1 + i_domestic·τ) / (1 + i_foreign·τ)</code> — no-arbitrage forward (CFA L1)</div>
+        <div><code>Forward premium/discount = F / S − 1</code></div>
+        <div><code>Profit = Final amount − Amount owed</code> · <code>Net = Gross − Trading costs</code></div>
+      </div>
+    </section>
+  </div>
+  <p class="foot">Illustrative Sep-2026 levels; market forwards constructed as CIRP fair + deliberate mispricing. Same engine as fx_arbitrage.py / FX_Arbitrage_Engine.xlsx · github.com/Gogulavasan/Riskless-arbitrage-</p>
+</div>
+
+<script>
+const REGIMES=[
+ ["US-988","US","§988 ordinary @37%, pooled",0.37,0.37,true,true],
+ ["US-1256","US","§1256 60/40 (26.8%) fwd, interest 37%, capital loss ring-fenced",0.37,0.268,true,false],
+ ["EU-abg","Europe (DE-style)","Abgeltungsteuer 26.375%, derivative loss ring-fenced, borrowing not deductible",0.26375,0.26375,false,false],
+ ["EU-biz","Europe (DE-style)","Business income pooled ~30%",0.30,0.30,true,true],
+ ["KR-wht","South Korea","Interest withheld 15.4%; OTC forward outside the net",0.154,0.11,false,false],
+ ["KR-agg","South Korea","Aggregated 49.5%; forward still separate",0.495,0.11,false,false],
+ ["IN-spec","India","Individual 31.2%; forward loss speculative (s.43(5)), ring-fenced",0.312,0.312,true,false],
+ ["IN-pool","India","Individual business income pooled 31.2%",0.312,0.312,true,true],
+ ["AU-775","Australia","Div 775 ordinary 47%, pooled",0.47,0.47,true,true],
+ ["AU-cgt","Australia","CGT-style 47%, capital loss quarantined",0.47,0.47,true,false],
+];
+const PAIRS=[
+ {pair:"EUR/USD",days:91,spot:1.16,fwd:1.164966,ib:.022,iq:.038,bb:360,bq:360,c:{ss:.00005,fs:.0001,bs:.0005,ds:.0002,mp:0,mf:0,fee:.1},profile:"bank / dealer costs",regs:["US-988","US-1256"]},
+ {pair:"GBP/USD",days:91,spot:1.35,fwd:1.3505095122527264,ib:.037,iq:.038,bb:365,bq:360,c:{ss:.0001,fs:.0002,bs:.0025,ds:.001,mp:.02,mf:.04,fee:.5},profile:"retail costs",regs:["EU-abg","EU-biz"]},
+ {pair:"USD/JPY",days:91,spot:160,fwd:158.8684,ib:.038,iq:.0105,bb:360,bq:360,c:{ss:.01,fs:.02,bs:.0025,ds:.001,mp:.02,mf:.04,fee:.5},profile:"retail costs",regs:["KR-wht","KR-agg"]},
+ {pair:"USD/INR",days:91,spot:94.9,fwd:95.5126,ib:.038,iq:.054,bb:360,bq:365,c:{ss:.01,fs:.03,bs:.01,ds:.005,mp:.05,mf:.065,fee:2},profile:"onshore costs",regs:["IN-spec","IN-pool"]},
+];
+const N=1e6;
+const prep=m=>{[m.base,m.quote]=m.pair.split("/");m.tb=m.days/m.bb;m.tq=m.days/m.bq;m.N=N;return m};
+const ffair=m=>m.spot*(1+m.iq*m.tq)/(1+m.ib*m.tb);
+const annBps=(x,d,b)=>x*b/d*1e4;
+function analyse(m){const f=ffair(m),gap=m.fwd-f,bps=annBps(gap/m.spot,m.days,m.bq),flags=[];
+  if(m.ib>m.iq&&m.fwd>m.spot)flags.push(["hot",`Inconsistent input: ${m.base} has the higher rate but trades at a forward premium — parity says discount. Check the quote before trusting output.`]);
+  if(m.ib<m.iq&&m.fwd<m.spot)flags.push(["hot",`Inconsistent input: ${m.base} has the lower rate but trades at a forward discount.`]);
+  if(Math.abs(bps)>25)flags.push(["warn",`Red flag: ${bps.toFixed(1)} bp annualised is far beyond what survives in liquid FX — suspect mismatched tenors, day-count, stale spot, or capital controls (onshore/NDF segmentation), not a market inefficiency.`]);
+  return{f,gap,bps,dir:Math.abs(bps)<=.01?"none":(gap>0?"borrow_quote":"borrow_base"),flags}}
+function pnl(m,c,dir,on){const hs=on.s?c.ss/2:0,hf=on.f?c.fs/2:0,bs=on.r?c.bs:0,ds=on.r?c.ds:0;const sb=m.spot-hs,sa=m.spot+hs,fb=m.fwd-hf,fa=m.fwd+hf;let r={};
+  if(dir==="borrow_quote"){r.i_pay=N*(m.iq+bs)*m.tq;r.owed=N+r.i_pay;const b=N/sa;r.i_earn=b*(m.ib-ds)*m.tb*fb;r.fx=b*fb-N;r.final=b*(1+(m.ib-ds)*m.tb)*fb;r.tau=m.tq}
+  else{r.i_pay=N*(m.ib+bs)*m.tb;r.owed=N+r.i_pay;const q=N*sb;r.i_earn=q*(m.iq-ds)*m.tq/fa;r.fx=q/fa-N;r.final=q*(1+(m.iq-ds)*m.tq)/fa;r.tau=m.tb}
+  r.gross=r.final-r.owed;r.margin=on.mg?N*c.mp*c.mf*r.tau:0;r.fees=on.fe?N*c.fee/1e4:0;r.net=r.gross-r.margin-r.fees;return r}
+const WF=[["Gross (mid, risk-free)",{}],["Spot bid-ask",{s:1}],["Forward bid-ask",{s:1,f:1}],["Borrow/lend spread",{s:1,f:1,r:1}],["Margin funding",{s:1,f:1,r:1,mg:1}],["Fees",{s:1,f:1,r:1,mg:1,fe:1}]];
+function taxDue(p,t){const[,,,ri,rf,ded,off]=t;const ip=p.i_earn-(ded?p.i_pay+p.margin+p.fees:0),fp=p.fx;
+  if(off){if(fp>=0&&ip>=0)return ri*ip+rf*fp;return(fp<0?ri:rf)*Math.max(ip+fp,0)}return ri*Math.max(ip,0)+rf*Math.max(fp,0)}
+const f2=x=>x.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const fp=(x,m)=>x.toFixed(m.pair.endsWith("JPY")?3:6);
+const sgn=x=>(x>=0?"+":"")+x;
+let sel=0;
+const $=id=>document.getElementById(id);
+const regSel=$("regime");REGIMES.forEach(r=>{const o=document.createElement("option");o.value=r[0];o.textContent=`${r[1]} — ${r[2]}`;regSel.appendChild(o)});
+PAIRS.forEach((p,i)=>{const b=document.createElement("button");b.textContent=p.pair;b.id="pair"+i;b.onclick=()=>{sel=i;regSel.value=PAIRS[i].regs[0];render()};$("pairSeg").appendChild(b)});
+regSel.value=PAIRS[0].regs[0];regSel.onchange=render;
+
+function render(){
+  const m=prep({...PAIRS[sel]}),c=m.c,a=analyse(m),dir=a.dir==="none"?"borrow_quote":a.dir;
+  document.querySelectorAll("#pairSeg button").forEach((b,i)=>b.setAttribute("aria-pressed",i===sel));
+  const wf=WF.map(([l,on])=>[l,pnl(m,c,dir,on).net]),full=pnl(m,c,dir,{s:1,f:1,r:1,mg:1,fe:1});
+  const ccy=dir==="borrow_quote"?m.quote:m.base,gross=wf[0][1],net=full.net;
+  const vc=Math.abs(gross)<=1e-6?"No arbitrage":(net>1e-6?"Arbitrage survives costs":"Arbitrage exists but is cost-negative");
+  const vcls=vc==="Arbitrage survives costs"?"good":(vc==="No arbitrage"?"warn":"bad");
+  const netbp=annBps(net/N,m.days,dir==="borrow_quote"?m.bq:m.bb);
+  // KPIs
+  $("kpis").innerHTML=[
+    ["Spot S",fp(m.spot,m),`${m.quote} per ${m.base}`],
+    ["F fair (CIRP)",fp(a.f,m),`premium ${sgn((a.f/m.spot-1)*100).slice(0,8)}%`],
+    ["F market",fp(m.fwd,m),`premium ${sgn((m.fwd/m.spot-1)*100).slice(0,8)}%`],
+    ["Mispricing",`${sgn(+a.bps.toFixed(2))} bp`,`${sgn(+a.gap.toFixed(m.pair.endsWith("JPY")?3:6))} price units, annualised`],
+    ["Net after costs",`${sgn(+netbp.toFixed(2))} bp`,`${f2(net)} ${ccy} per ${f2(N)}`],
+  ].map(([l,v,s])=>`<div class="tile"><div class="lab">${l}</div><div class="val">${v}</div><div class="sub">${s}</div></div>`).join("")
+  +`<div class="tile verdict ${vcls}"><div class="lab">Verdict after costs</div><div class="val">${vc}</div><div class="sub">${dir==="borrow_quote"?`borrow ${m.quote} · sell ${m.base} fwd`:`borrow ${m.base} · buy ${m.base} fwd`}</div></div>`;
+  // waterfall svg
+  $("wfsub").textContent=`per ${f2(N)} ${ccy} borrowed · ${m.profile} · Profit = Final − Owed`;
+  const W=560,H=250,padL=56,padR=12,padT=16,padB=44,vals=wf.map(x=>x[1]);
+  const lo=Math.min(0,...vals),hi=Math.max(0,...vals),span=(hi-lo)||1,y=v=>padT+(hi-v)/span*(H-padT-padB);
+  const n=wf.length,bw=(W-padL-padR)/n,ticks=5;let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cost waterfall">`;
+  for(let i=0;i<=ticks;i++){const v=lo+span*i/ticks;s+=`<line x1="${padL}" x2="${W-padR}" y1="${y(v)}" y2="${y(v)}" stroke="#1F2B45"/><text x="${padL-6}" y="${y(v)+3}" text-anchor="end">${Math.round(v).toLocaleString()}</text>`}
+  s+=`<line x1="${padL}" x2="${W-padR}" y1="${y(0)}" y2="${y(0)}" stroke="#8FA3BF" stroke-dasharray="3 3"/>`;
+  wf.forEach(([l,v],i)=>{const x=padL+i*bw+bw*.18,w=bw*.64;let top,bot,col;
+    if(i===0||i===n-1){top=Math.min(y(0),y(v));bot=Math.max(y(0),y(v));col=i===0?"#9B5DE5":(v>=0?"#00F5D4":"#F15BB5")}
+    else{const p=wf[i-1][1];top=Math.min(y(p),y(v));bot=Math.max(y(p),y(v));col=v>=p?"#00F5D4":"#F15BB5"}
+    s+=`<rect x="${x}" y="${top}" width="${w}" height="${Math.max(bot-top,1.5)}" rx="2" fill="${col}" style="filter:drop-shadow(0 0 5px ${col}88)"/>`;
+    if(i>0&&i<n-1)s+=`<line x1="${x-bw*.18}" x2="${x}" y1="${y(wf[i-1][1])}" y2="${y(wf[i-1][1])}" stroke="#8FA3BF" stroke-width=".7"/>`;
+    const d=i?v-wf[i-1][1]:v;s+=`<text x="${x+w/2}" y="${top-4}" text-anchor="middle" fill="#E6F1FF">${i?sgn(+d.toFixed(0)):Math.round(v)}</text>`;
+    s+=`<text x="${x+w/2}" y="${H-padB+14}" text-anchor="middle">${l.split(" ")[0]}</text><text x="${x+w/2}" y="${H-padB+26}" text-anchor="middle">${l.split(" ").slice(1).join(" ")}</text>`});
+  s+=`<text x="${W-padR}" y="${H-4}" text-anchor="end">first bar = gross · last bar = net after all costs · ${ccy}</text></svg>`;
+  $("wf").innerHTML=s;
+  $("flags").innerHTML=a.flags.map(([k,t])=>`<div class="flag ${k}">${t}</div>`).join("")||`<div class="flag" style="border-color:var(--cyan);background:rgba(0,245,212,.06)">Sanity: parity direction consistent, gap within the range seen in liquid markets. Biggest erosion: <b>${wf.slice(1).map((x,i)=>[x[0],x[1]-wf[i][1]]).sort((p,q)=>p[1]-q[1])[0][0]}</b>.</div>`;
+  // tax
+  const chosen=[regSel.value,...m.regs.filter(k=>k!==regSel.value)].slice(0,2).map(k=>REGIMES.find(r=>r[0]===k));
+  const scale=Math.max(Math.abs(net),...chosen.map(t=>Math.abs(net-taxDue(full,t))),1e-9);
+  const bar=(v,col)=>`<div class="track"><i style="${v>=0?`left:50%;width:${Math.abs(v)/scale*50}%`:`right:50%;width:${Math.abs(v)/scale*50}%`};background:${col};box-shadow:0 0 6px ${col}88"></i></div>`;
+  $("tax").innerHTML=`<div class="row"><div class="name">After costs (pre-tax)</div><div class="bars"><span>net</span>${bar(net,net>=0?"#9B5DE5":"#F15BB5")}<span>${f2(net)} ${ccy}</span></div></div>`+
+    chosen.map(t=>{const tx=taxDue(full,t),at=net-tx;const v=net<=1e-6?["neu","Cost-negative before tax"]:(at>1e-6?["good","Profitable after tax"]:["bad","TAX FLIPS IT TO A LOSS"]);
+      return`<div class="row"><div class="name">${t[1]} — ${t[2]}<small>tax ${f2(tx)} · interest pool ${t[5]?"net of borrowing":"gross"} · ${t[6]?"pools offset":"loss ring-fenced"}</small></div><div class="bars"><span class="pill ${v[0]}">${v[1]}</span>${bar(at,v[0]==="good"?"#00F5D4":v[0]==="bad"?"#F15BB5":"#8FA3BF")}<span>${f2(at)} ${ccy}</span></div></div>`}).join("")
+    +`<div class="foot" style="margin-top:4px">Taxable pieces: interest earned ${f2(full.i_earn)} · interest paid ${f2(full.i_pay)} · FX result on principal ${sgn(+full.fx.toFixed(2))}. A regime that taxes the winning leg but ring-fences the losing one flips a marginal profit.</div>`;
+  // heatmap
+  const gaps=[];for(let g=30;g>=-30;g-=2)gaps.push(g);const spreads=[0,5,10,25,50,100];let cells="";
+  gaps.forEach(g=>spreads.forEach(sp=>{const mm=prep({...PAIRS[sel]});mm.fwd=ffair(mm)*(1+g/1e4*mm.days/mm.bq);const cc={...c,bs:sp/1e4,ds:sp/2e4};const aa=analyse(mm);const d=aa.dir==="none"?"borrow_quote":aa.dir;const nn=pnl(mm,cc,d,{s:1,f:1,r:1,mg:1,fe:1}).net;
+    cells+=`<div class="${nn>0?"on":""}${g===0?" zero":""}" title="mispricing ${g} bp, spread ${sp} bp → net ${f2(nn)}"></div>`}));
+  $("cells").innerHTML=cells;$("ylab").innerHTML=[30,20,10,0,-10,-20,-30].map(v=>`<span>${sgn(v)} bp</span>`).join("");$("xlab").innerHTML=spreads.map(v=>`<span>${v}</span>`).join("");
+  // trace
+  const tA=chosen[0];$("trace").innerHTML=[["S",fp(m.spot,m)],["× (1+i_q·τ_q)/(1+i_b·τ_b)",`(1+${(m.iq*100).toFixed(2)}%×${m.tq.toFixed(4)})/(1+${(m.ib*100).toFixed(2)}%×${m.tb.toFixed(4)})`],["= F fair",fp(a.f,m)],["F market",fp(m.fwd,m)],["gap",`${sgn(+a.gap.toFixed(6))} → ${sgn(+a.bps.toFixed(2))} bp ann.`],["final − owed",`${f2(full.final)} − ${f2(full.owed)}`],["= gross → net",`${f2(full.gross)} → ${f2(net)} ${ccy}`],[`after tax (${tA[0]})`,`${f2(net-taxDue(full,tA))} ${ccy}`]]
+    .map(([k,v],i)=>`<div class="r"><span class="arrow">${i?"↓":"·"}</span><span class="k">${k}</span><span class="v">${v}</span></div>`).join("");
+}
+render();
+</script>
+</body>
+</html>
