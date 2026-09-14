@@ -23,15 +23,13 @@
   <nav class="nav">
   <a class="brand" href="index.html">ARBITRAGE <span>INSIGHTS</span></a>
   <a class="item" href="index.html">Home</a>
-  <a class="item" href="calculator.html">CIRP Calculator</a>
+  <a class="item" href="calculator.html">Arbitrage Calculator</a>
   <a class="item" href="invest.html" aria-current="page">Investment Calculator</a>
-  <a class="item" href="dashboard.html">Dashboard</a>
-  <a class="item" href="powerbi.html">Power BI</a>
   <a class="item" href="https://github.com/Gogulavasan/Riskless-arbitrage-">GitHub</a>
 </nav>
   <div>
     <h1 class="page">INVESTMENT <span>CALCULATOR</span></h1>
-    <p class="lede">How much capital, into which pair, from which country — and what is left <b>after tax</b>? Pick a trade and a jurisdiction; the engine runs the covered-interest round trip at your size, then compares every country side by side. Tax rates are illustrative placeholders — verify before acting.</p>
+    <p class="lede">How much capital, into which pair, from which country — and what is left <b>after tax</b>? Pick a trade and a country; the calculator runs the trade at your size, then compares every country side by side. Tax rates are illustrative placeholders — verify before acting.</p>
   </div>
 
   <div class="panel">
@@ -108,7 +106,7 @@ function calc() {
     ["Verdict", best.v === "Profitable after tax" ? "Keeps money after tax" : (best.v === "TAX FLIPS IT TO A LOSS" ? "Tax flips it to a loss" : r.verdict), `${m.pair} · ${FX.COSTS[ck].name} · ${country}`, vcls + " verdict"],
   ].map(([l, v, s, c]) => `<div class="tile ${c}"><div class="lab">${l}</div><div class="val">${v}</div><div class="sub">${s}</div></div>`).join("");
 
-  $("wfsub").textContent = `${m.pair}: S ${F.px(m.spot, m.pair)} → F_fair ${F.px(r.a.f, m.pair)} vs F_market ${F.px(m.fwd, m.pair)} (${F.sgn(r.a.bps.toFixed(2))} bp) · per ${F.n0(N)} ${ccy}`;
+  $("wfsub").textContent = `${m.pair}: spot ${F.px(m.spot, m.pair)} → fair forward ${F.px(r.a.f, m.pair)} vs market ${F.px(m.fwd, m.pair)} (${F.sgn(r.a.bps.toFixed(2))} bp) · per ${F.n0(N)} ${ccy}`;
   const wfRows = r.wf.map(([l, v], i) => [l, v, i ? v - r.wf[i - 1][1] : null]).concat([[`tax — ${best.t[3].split(" –")[0]}`, best.at, -best.tx]]);
   $("wf").innerHTML = wfRows.map(([l, v, d]) => `<span class="k">${l}</span><div class="bar"><i style="${v >= 0 ? `left:50%;width:${Math.min(50, Math.abs(v) / Math.max(Math.abs(r.gross), Math.abs(r.net), Math.abs(best.at), 1e-9) * 50)}%;background:var(--cyan)` : `right:50%;width:${Math.min(50, Math.abs(v) / Math.max(Math.abs(r.gross), Math.abs(r.net), Math.abs(best.at), 1e-9) * 50)}%;background:var(--magenta)`}"></i></div><span>${F.n2(v)}${d === null ? "" : ` <span style="color:var(--mute)">(${F.sgn(F.n2(d))})</span>`}</span>`).join("");
   $("flags").innerHTML = r.a.flags.map(([k, t]) => `<div class="flag ${k}">${t}</div>`).join("") || `<div class="flag ok">Sanity: parity direction consistent; gap within the range seen in liquid markets.</div>`;

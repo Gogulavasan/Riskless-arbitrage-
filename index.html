@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Arbitrage Insights</title>
-<meta name="description" content="FX Arbitrage Intelligence Engine — covered interest rate parity deviations, real-world costs, country tax layer.">
+<meta name="description" content="FX arbitrage made simple — find the gap between the fair forward rate and the market rate, then see what is left after costs and tax.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="theme.css">
 <script src="engine.js"></script>
@@ -27,57 +27,53 @@
   <nav class="nav">
   <a class="brand" href="index.html">ARBITRAGE <span>INSIGHTS</span></a>
   <a class="item" href="index.html" aria-current="page">Home</a>
-  <a class="item" href="calculator.html">CIRP Calculator</a>
+  <a class="item" href="calculator.html">Arbitrage Calculator</a>
   <a class="item" href="invest.html">Investment Calculator</a>
-  <a class="item" href="dashboard.html">Dashboard</a>
-  <a class="item" href="powerbi.html">Power BI</a>
   <a class="item" href="https://github.com/Gogulavasan/Riskless-arbitrage-">GitHub</a>
 </nav>
   <section class="hero">
     <div>
       <h1 class="page">ARBITRAGE <span>INSIGHTS</span></h1>
-      <p class="lede">An FX Arbitrage Intelligence Engine. It detects <b>Covered Interest Rate Parity</b> deviations between currency pairs, decides which currency to borrow and which to invest, runs the trade through real bid-ask, funding, margin and fee frictions, then applies a country tax layer — so the answer is not "is there an arbitrage" but "what is left after the real world".</p>
-      <div class="cta"><a class="primary" href="invest.html">Calculate my after-tax return</a><a class="ghost" href="calculator.html">Open the CIRP calculator</a><a class="ghost" href="dashboard.html">See the dashboard</a></div>
+      <p class="lede">A simple FX arbitrage tool. It compares the <b>fair forward rate</b> of a currency pair with the <b>market forward rate</b>, finds the gap, works out which currency to borrow and which to invest in, then shows what is left after real-world costs and tax — so the answer is not "is there an arbitrage" but "what is left after the real world".</p>
+      <div class="cta"><a class="primary" href="invest.html">Calculate my after-tax return</a><a class="ghost" href="calculator.html">Open the arbitrage calculator</a></div>
     </div>
     <div class="formula">
-      <span class="k">No-arbitrage forward (CFA Level 1)</span>
-      <span class="big">F = S × (1 + i_domestic·τ) / (1 + i_foreign·τ)</span>
-      <span class="k">Mispricing</span><span>F_market − F_fair</span>
-      <span class="k">Forward premium / discount</span><span>F / S − 1</span>
-      <span class="k">Arbitrage profit</span><span>Final amount − Amount owed · Net = Gross − Trading costs</span>
+      <span class="k">What is FX arbitrage?</span>
+      <span class="big">Borrow one currency, invest in the other, lock the exchange rate today.</span>
+      <span class="k">The opportunity</span><span>If the locked-in forward rate differs from the fair rate, there is a gain with no currency risk.</span>
+      <span class="k">The reality check</span><span>Bid-ask spreads, funding costs, fees and tax decide whether that gain survives.</span>
+      <span class="k">The result</span><span>Gross gain → after costs → after tax.</span>
     </div>
   </section>
 
   <section class="panel">
-    <h2>The four worked cases, live<small>illustrative Sep-2026 levels · 3-month tenor · market forwards constructed as CIRP fair + a deliberate mispricing · per 1,000,000 borrowed</small></h2>
+    <h2>The four worked cases, live<small>illustrative Sep-2026 levels · 3-month · market forwards set at fair + a deliberate gap · per 1,000,000 borrowed</small></h2>
     <div class="tscroll"><table id="summary"></table></div>
   </section>
 
   <section class="cards">
     <a class="card" href="invest.html"><b>INVESTMENT CALCULATOR</b><span>Capital in, country and entity chosen → gross, after-cost and after-tax profit, capital needed for a target, and a pair × country return matrix.</span></a>
-    <a class="card" href="calculator.html"><b>CIRP CALCULATOR</b><span>Full step-by-step trace: S → F_fair → F_market → gap → direction → cost waterfall → verdict → two tax regimes. Flags inconsistent inputs.</span></a>
-    <a class="card" href="dashboard.html"><b>NEON DASHBOARD</b><span>Executive view: KPI tiles, friction waterfall, tax-flip comparison, break-even frontier heat-map.</span></a>
-    <a class="card" href="powerbi.html"><b>POWER BI MODEL</b><span>Embedded report plus the kit to rebuild it: tidy CSVs, DAX measures, neon theme JSON, layout guide.</span></a>
+    <a class="card" href="calculator.html"><b>ARBITRAGE CALCULATOR</b><span>Enter spot, forward and the two interest rates. Get the fair forward, the gap, the trade, the costs and the after-tax result, step by step.</span></a>
     <a class="card" href="https://github.com/Gogulavasan/Riskless-arbitrage-"><b>SOURCE</b><span>Python engine, Excel workbook with live formulas, unit tests, and this site — all cross-checked to the cent.</span></a>
   </section>
 
   <section class="panel">
     <h2>How the engine works</h2>
     <div class="steps">
-      <div><b>Ingest</b>spot, market forward, both risk-free rates, tenor, day-count basis per currency</div>
-      <div><b>Imply</b>the CIRP forward from spot and the two rates</div>
-      <div><b>Compare</b>implied vs market: mispricing in price units and annualised bp; premium/discount both ways</div>
-      <div><b>Direct</b>forward too dear → borrow quote, sell base forward; too cheap → borrow base, buy base forward</div>
-      <div><b>Cost</b>each friction switched on in turn, on the correct side of every quote</div>
-      <div><b>Tax</b>interest earned, interest paid and the FX result taxed as each country actually treats them</div>
-      <div><b>Sanity</b>the higher-rate currency must trade at a forward discount; gaps above 25 bp are suspect data</div>
+      <div><b>Inputs</b>spot rate, market forward rate, the two interest rates, number of days</div>
+      <div><b>Fair rate</b>work out the fair forward rate from spot and the two interest rates</div>
+      <div><b>Compare</b>fair forward vs market forward — the gap is the opportunity</div>
+      <div><b>Trade</b>borrow one currency, invest in the other, lock the exchange rate with a forward</div>
+      <div><b>Costs</b>spreads, funding, margin and fees, taken off one by one</div>
+      <div><b>Tax</b>the gain taxed the way each country treats it</div>
+      <div><b>Check</b>a gap that looks too good usually means bad data, not free money</div>
     </div>
   </section>
-  <p class="foot">Built for CFA Level 1 study. Covered parity only — never Uncovered IRP. Tax rates are placeholders; verify before use.</p>
+  <p class="foot">The exchange rate is locked in advance, so there is no currency risk. Tax rates are placeholders; verify before use.</p>
 </div>
 <script>
 const F = FX.fmt, N = 1e6;
-let h = `<tr><th>Pair</th><th>Spot</th><th>F fair (CIRP)</th><th>F market</th><th>Mispricing</th><th>Direction</th><th>Gross</th><th>After costs</th><th>Verdict</th><th>Sanity</th></tr>`;
+let h = `<tr><th>Pair</th><th>Spot</th><th>Fair forward</th><th>Market forward</th><th>Gap</th><th>Trade</th><th>Gross</th><th>After costs</th><th>Result</th><th>Check</th></tr>`;
 for (const p of FX.PAIRS) { const r = FX.run(p, FX.COSTS[p.cost], N); const cls = r.verdict === "Arbitrage survives costs" ? "good" : (r.verdict === "No arbitrage" ? "warn" : "bad");
   h += `<tr><td><b>${p.pair}</b><br><span class="note">${FX.COSTS[p.cost].name}</span></td><td>${F.px(p.spot, p.pair)}</td><td>${F.px(r.a.f, p.pair)}</td><td>${F.px(p.fwd, p.pair)}</td><td>${F.sgn(r.a.bps.toFixed(2))} bp</td><td style="text-align:left;font-size:12px">${r.a.dir === "none" ? "—" : (r.dir === "borrow_quote" ? `borrow ${r.m.quote}, sell ${r.m.base} fwd` : `borrow ${r.m.base}, buy ${r.m.base} fwd`)}</td><td>${F.n2(r.gross)} ${r.ccy}</td><td>${F.n2(r.net)} ${r.ccy}</td><td><span class="pill ${cls}">${r.verdict}</span></td><td>${r.a.flags.length ? '<span class="pill warn">red flag</span>' : '<span class="pill neu">OK</span>'}</td></tr>`; }
 document.getElementById("summary").innerHTML = h;

@@ -1,5 +1,5 @@
 /* FX Arbitrage Intelligence Engine — browser port of fx_arbitrage.py (same maths, cross-checked).
-   Pair BASE/QUOTE: S = units of QUOTE per 1 BASE. CFA "domestic" = quote currency.
+   Pair BASE/QUOTE: S = units of QUOTE per 1 BASE.
    F_fair = S (1 + i_quote τ_q) / (1 + i_base τ_b);  mispricing = F_market − F_fair;  premium = F/S − 1;
    Profit = Final amount − Amount owed;  Net = Gross − Trading costs. */
 (function (global) {
@@ -28,12 +28,12 @@
     jpy:    { name: "Retail (JPY quoted)", ss: 0.01, fs: 0.02, bs: 0.0025, ds: 0.001, mp: 0.02, mf: 0.04, fee: 0.5 },
     inr:    { name: "Onshore INR",     ss: 0.01,   fs: 0.03,   bs: 0.01,   ds: 0.005,  mp: 0.05, mf: 0.065, fee: 2 },
   };
-  // Illustrative Sep-2026 levels; market forwards constructed as CIRP fair + deliberate mispricing.
+  // Illustrative Sep-2026 levels; market forwards set at fair + a deliberate gap.
   const PAIRS = [
     { pair: "EUR/USD", days: 91, spot: 1.16, fwd: 1.164966,           ib: 0.022, iq: 0.038,  bb: 360, bq: 360, cost: "bank",   note: "fair +3 pips, bank cost profile" },
-    { pair: "GBP/USD", days: 91, spot: 1.35, fwd: 1.3505095122527264, ib: 0.037, iq: 0.038,  bb: 365, bq: 360, cost: "retail", note: "exactly at parity" },
+    { pair: "GBP/USD", days: 91, spot: 1.35, fwd: 1.3505095122527264, ib: 0.037, iq: 0.038,  bb: 365, bq: 360, cost: "retail", note: "exactly at fair value" },
     { pair: "USD/JPY", days: 91, spot: 160,  fwd: 158.8684,           ib: 0.038, iq: 0.0105, bb: 360, bq: 360, cost: "jpy",    note: "fair −0.03" },
-    { pair: "USD/INR", days: 91, spot: 94.9, fwd: 95.5126,            ib: 0.038, iq: 0.054,  bb: 360, bq: 365, cost: "inr",    note: "fair +0.25 (onshore/NDF segmentation)" },
+    { pair: "USD/INR", days: 91, spot: 94.9, fwd: 95.5126,            ib: 0.038, iq: 0.054,  bb: 360, bq: 365, cost: "inr",    note: "fair +0.25 (onshore market gap)" },
   ];
 
   function prep(m) { const o = { ...m }; [o.base, o.quote] = o.pair.split("/"); o.tb = o.days / o.bb; o.tq = o.days / o.bq; return o; }
@@ -42,9 +42,9 @@
 
   function analyse(m) {
     const f = impliedForward(m), gap = m.fwd - f, bps = annBps(gap / m.spot, m.days, m.bq), flags = [];
-    if (m.ib > m.iq && m.fwd > m.spot) flags.push(["hot", `Inconsistent input: ${m.base} has the HIGHER rate but trades at a forward PREMIUM (F_mkt ${m.fwd} > S ${m.spot}). Parity says it must be at a discount — check the forward quote / rate inputs before trusting output.`]);
-    if (m.ib < m.iq && m.fwd < m.spot) flags.push(["hot", `Inconsistent input: ${m.base} has the LOWER rate but trades at a forward DISCOUNT (F_mkt ${m.fwd} < S ${m.spot}). Parity says premium.`]);
-    if (Math.abs(bps) > 25) flags.push(["warn", `Red flag: ${bps.toFixed(1)} bp annualised is far beyond what survives in liquid FX — suspect mismatched tenors, wrong day-count, stale spot, or capital controls (onshore/NDF segmentation), not a market inefficiency.`]);
+    if (m.ib > m.iq && m.fwd > m.spot) flags.push(["hot", `Check your inputs: ${m.base} has the higher interest rate, so its forward rate (${m.fwd}) should be below the spot rate (${m.spot}), not above it. One of the numbers is probably wrong.`]);
+    if (m.ib < m.iq && m.fwd < m.spot) flags.push(["hot", `Check your inputs: ${m.base} has the lower interest rate, so its forward rate (${m.fwd}) should be above the spot rate (${m.spot}), not below it.`]);
+    if (Math.abs(bps) > 25) flags.push(["warn", `Looks too good: a gap of ${bps.toFixed(1)} bp per year is far bigger than real markets allow. Usually this means stale or mismatched data, or a currency with capital controls (like INR) — not free money.`]);
     return { f, gap, bps, pm: m.fwd / m.spot - 1, pf: f / m.spot - 1, dir: Math.abs(bps) <= 0.01 ? "none" : (gap > 0 ? "borrow_quote" : "borrow_base"), flags };
   }
 
