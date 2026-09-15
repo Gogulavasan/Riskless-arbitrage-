@@ -1,0 +1,120 @@
+{
+  "_readme": "Shared settings for the live monitor. The web page and the GitHub Action both read this file. Interest rates are annual % (policy-rate proxies \u2014 update when central banks move). forward_points is YOUR broker's outright forward quote minus spot, in price units, for the tenor below; replace the sample values with real quotes and set quotes_are_real to true to enable alerts.",
+  "tenor_days": 91,
+  "poll_seconds": 60,
+  "alert_threshold_bp": 2.0,
+  "quotes_are_real": false,
+  "quotes_as_of": "sample",
+  "cost_profile": "bank",
+  "spot_sources": [
+    "https://api.fxratesapi.com/latest?base=USD&currencies=EUR,GBP,JPY,INR",
+    "https://open.er-api.com/v6/latest/USD"
+  ],
+  "sample_spot_usd_base": {
+    "EUR": 0.8665,
+    "GBP": 0.7421,
+    "JPY": 155.11,
+    "INR": 95.95
+  },
+  "rates": {
+    "USD": {
+      "rate": 3.8,
+      "basis": 360,
+      "source": "Fed funds proxy"
+    },
+    "EUR": {
+      "rate": 2.2,
+      "basis": 360,
+      "source": "ECB deposit proxy"
+    },
+    "GBP": {
+      "rate": 3.7,
+      "basis": 365,
+      "source": "BoE Bank Rate proxy"
+    },
+    "JPY": {
+      "rate": 1.05,
+      "basis": 360,
+      "source": "BoJ policy proxy"
+    },
+    "INR": {
+      "rate": 5.4,
+      "basis": 365,
+      "source": "RBI repo / T-bill proxy"
+    }
+  },
+  "pairs": [
+    {
+      "pair": "EUR/USD",
+      "forward_points": 0.004942,
+      "cost_profile": "bank"
+    },
+    {
+      "pair": "GBP/USD",
+      "forward_points": 0.000509,
+      "cost_profile": "bank"
+    },
+    {
+      "pair": "USD/JPY",
+      "forward_points": -1.098,
+      "cost_profile": "bank_jpy"
+    },
+    {
+      "pair": "USD/INR",
+      "forward_points": 0.6166,
+      "cost_profile": "inr"
+    }
+  ],
+  "costs": {
+    "bank": {
+      "name": "Bank / dealer",
+      "ss": 5e-05,
+      "fs": 0.0001,
+      "bs": 0.0005,
+      "ds": 0.0002,
+      "mp": 0,
+      "mf": 0,
+      "fee": 0.1
+    },
+    "retail": {
+      "name": "Retail / non-bank",
+      "ss": 0.0001,
+      "fs": 0.0002,
+      "bs": 0.0025,
+      "ds": 0.001,
+      "mp": 0.02,
+      "mf": 0.04,
+      "fee": 0.5
+    },
+    "jpy": {
+      "name": "Retail (JPY quoted)",
+      "ss": 0.01,
+      "fs": 0.02,
+      "bs": 0.0025,
+      "ds": 0.001,
+      "mp": 0.02,
+      "mf": 0.04,
+      "fee": 0.5
+    },
+    "inr": {
+      "name": "Onshore INR",
+      "ss": 0.01,
+      "fs": 0.03,
+      "bs": 0.01,
+      "ds": 0.005,
+      "mp": 0.05,
+      "mf": 0.065,
+      "fee": 2
+    },
+    "bank_jpy": {
+      "name": "Bank / dealer (JPY quoted)",
+      "ss": 0.005,
+      "fs": 0.01,
+      "bs": 0.0005,
+      "ds": 0.0002,
+      "mp": 0,
+      "mf": 0,
+      "fee": 0.1
+    }
+  }
+}

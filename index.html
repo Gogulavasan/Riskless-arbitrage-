@@ -4,79 +4,96 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Arbitrage Insights</title>
-<meta name="description" content="FX arbitrage made simple — find the gap between the fair forward rate and the market rate, then see what is left after costs and tax.">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<meta name="description" content="Live FX arbitrage monitor — compares the fair forward rate with your market forward quotes using live spot rates, and alerts when a gap survives costs.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="theme.css">
 <script src="engine.js"></script>
 <style>
-  .hero{display:grid;grid-template-columns:1.2fr 1fr;gap:20px;align-items:center;padding-block:10px} @media(max-width:900px){.hero{grid-template-columns:1fr}}
-  .hero h1{font-size:34px} .hero .lede{font-size:15px;margin-top:10px}
-  .cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px} .cta a{display:inline-block;padding:10px 16px;border-radius:8px;text-decoration:none;font:600 13px var(--body)}
-  .cta a.primary{background:var(--cyan);color:#041;box-shadow:var(--glow-c)} .cta a.ghost{border:1px solid var(--line);color:var(--ink)}
-  .formula{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:10px;font:13px var(--mono)}
-  .formula .big{font:500 18px var(--mono);color:var(--amber);text-shadow:var(--glow-a)} .formula .k{color:var(--mute);font-family:var(--body);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;text-decoration:none;color:var(--ink);display:grid;gap:6px;transition:border-color .2s,box-shadow .2s}
-  .card:hover{border-color:var(--cyan);box-shadow:var(--glow-c)} .card b{font:700 13px var(--disp);letter-spacing:.04em;color:var(--cyan)} .card span{color:var(--mute);font-size:12px}
-  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;counter-reset:s}
-  .steps div{background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:12px;font-size:12px;color:var(--mute)} .steps div::before{counter-increment:s;content:counter(s);display:block;font:700 18px var(--disp);color:var(--violet);margin-bottom:4px} .steps div b{color:var(--ink);display:block;margin-bottom:2px}
+  .head{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:end} @media(max-width:800px){.head{grid-template-columns:1fr}}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .status{font-size:12px;color:var(--mute);font-family:var(--mono)}
+  #banner{border-left:4px solid var(--good);background:var(--good-soft);padding:12px 14px;border-radius:6px;font-size:14px}
+  tr.opp td{background:var(--good-soft)}
+  td.good{color:var(--good)} td.bad{color:var(--bad)}
+  .logrow{display:grid;grid-template-columns:90px 1fr;gap:12px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px} .logrow:last-child{border-bottom:0}
+  details.settings summary{cursor:pointer;font-weight:600;font-size:14px;list-style:none;display:flex;align-items:center;gap:8px} details.settings summary::after{content:"▾";color:var(--mute);margin-left:auto} details[open].settings summary::after{content:"▴"}
+  .how{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .how div{background:var(--card2);border:1px solid var(--line);border-radius:6px;padding:12px;font-size:13px;color:var(--mute)} .how b{color:var(--ink);display:block;margin-bottom:4px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;text-decoration:none;color:var(--ink);display:grid;gap:6px} .card:hover{border-color:var(--accent)} .card b{color:var(--accent)} .card span{color:var(--mute);font-size:13px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <nav class="nav">
-  <a class="brand" href="index.html">ARBITRAGE <span>INSIGHTS</span></a>
-  <a class="item" href="index.html" aria-current="page">Home</a>
-  <a class="item" href="calculator.html">Arbitrage Calculator</a>
-  <a class="item" href="invest.html">Investment Calculator</a>
-  <a class="item" href="https://github.com/Gogulavasan/Riskless-arbitrage-">GitHub</a>
-</nav>
-  <section class="hero">
+    <a class="brand" href="index.html">Arbitrage <span>Insights</span></a>
+    <a class="item" href="index.html" aria-current="page">Live Monitor</a>
+    <a class="item" href="calculator.html">Arbitrage Calculator</a>
+    <a class="item" href="invest.html">Investment Calculator</a>
+    <a class="item" href="https://github.com/Gogulavasan/Riskless-arbitrage-">GitHub</a>
+  </nav>
+
+  <div class="head">
     <div>
-      <h1 class="page">ARBITRAGE <span>INSIGHTS</span></h1>
-      <p class="lede">A simple FX arbitrage tool. It compares the <b>fair forward rate</b> of a currency pair with the <b>market forward rate</b>, finds the gap, works out which currency to borrow and which to invest in, then shows what is left after real-world costs and tax — so the answer is not "is there an arbitrage" but "what is left after the real world".</p>
-      <div class="cta"><a class="primary" href="invest.html">Calculate my after-tax return</a><a class="ghost" href="calculator.html">Open the arbitrage calculator</a></div>
+      <h1 class="page">Live FX arbitrage monitor</h1>
+      <p class="lede">Watches your currency pairs using live spot rates. For each pair it works out the fair forward rate, compares it with your market forward quote, takes off trading costs, and raises an alert the moment a gap is worth acting on.</p>
     </div>
-    <div class="formula">
-      <span class="k">What is FX arbitrage?</span>
-      <span class="big">Borrow one currency, invest in the other, lock the exchange rate today.</span>
-      <span class="k">The opportunity</span><span>If the locked-in forward rate differs from the fair rate, there is a gain with no currency risk.</span>
-      <span class="k">The reality check</span><span>Bid-ask spreads, funding costs, fees and tax decide whether that gain survives.</span>
-      <span class="k">The result</span><span>Gross gain → after costs → after tax.</span>
+    <div class="actions">
+      <button class="primary" id="notifyBtn">Enable browser alerts</button>
+      <button id="refreshBtn">Refresh now</button>
+      <span class="status" id="feedStatus">loading…</span>
+      <span class="status">· next check in <span id="next">–</span>s</span>
     </div>
-  </section>
+  </div>
+
+  <div id="banner" hidden></div>
+  <div id="quoteBadge"></div>
+  <section class="kpis" id="kpis"></section>
 
   <section class="panel">
-    <h2>The four worked cases, live<small>illustrative Sep-2026 levels · 3-month · market forwards set at fair + a deliberate gap · per 1,000,000 borrowed</small></h2>
-    <div class="tscroll"><table id="summary"></table></div>
+    <h2>Watched pairs<small>spot is live · forward points and interest rates are yours (Settings) · after-cost gap is in basis points per year on the amount borrowed</small></h2>
+    <div class="tscroll"><table id="tbl"></table></div>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <h2>Alert log<small>this session, newest first</small></h2>
+      <div id="log"></div>
+    </section>
+    <section class="panel">
+      <h2>Get alerts when this page is closed</h2>
+      <p class="note" style="margin:0 0 8px">Browser alerts only work while the tab is open. For alerts on your phone, the repository includes a checker that runs every 15 minutes on GitHub and messages a Telegram chat when an opportunity appears. Setup takes about five minutes:</p>
+      <ol class="note" style="margin:0;padding-left:18px;display:grid;gap:4px">
+        <li>In Telegram, create a bot with <b>@BotFather</b> and copy its token; send your bot one message, then read your chat id from <code>https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code>.</li>
+        <li>In the GitHub repo: Settings → Secrets and variables → Actions → add <code>TELEGRAM_BOT_TOKEN</code> and <code>TELEGRAM_CHAT_ID</code>.</li>
+        <li>Put your real forward points in <code>monitor_config.json</code> and set <code>quotes_are_real</code> to true. The checker uses the same file as this page.</li>
+      </ol>
+    </section>
+  </div>
+
+  <details class="settings panel" id="settings">
+    <summary>Settings — interest rates, your forward quotes, alert threshold</summary>
+    <div id="settingsBody" style="margin-top:12px"></div>
+  </details>
+
+  <section class="panel">
+    <h2>How it works</h2>
+    <div class="how">
+      <div><b>1 · Live spot</b>The current exchange rate is pulled from a public feed every minute.</div>
+      <div><b>2 · Fair forward</b>From spot and the two interest rates, the rate at which a forward should trade.</div>
+      <div><b>3 · Your quote</b>Your broker's forward points are added to spot to get the market forward.</div>
+      <div><b>4 · Gap and costs</b>Market minus fair is the gap; spreads, funding and fees are taken off.</div>
+      <div><b>5 · Alert</b>If what is left is above your threshold, you get a banner, a sound and a browser notification.</div>
+    </div>
+    <p class="note" style="margin:12px 0 0">Forward quotes are the one input no free feed provides, so the page ships with sample values and stays in "sample" mode until you enter real quotes. In major pairs a genuine gap after costs is rare and small; a large one usually means a stale quote or a currency with capital controls. Not investment advice.</p>
   </section>
 
   <section class="cards">
-    <a class="card" href="invest.html"><b>INVESTMENT CALCULATOR</b><span>Capital in, country and entity chosen → gross, after-cost and after-tax profit, capital needed for a target, and a pair × country return matrix.</span></a>
-    <a class="card" href="calculator.html"><b>ARBITRAGE CALCULATOR</b><span>Enter spot, forward and the two interest rates. Get the fair forward, the gap, the trade, the costs and the after-tax result, step by step.</span></a>
-    <a class="card" href="https://github.com/Gogulavasan/Riskless-arbitrage-"><b>SOURCE</b><span>Python engine, Excel workbook with live formulas, unit tests, and this site — all cross-checked to the cent.</span></a>
+    <a class="card" href="calculator.html"><b>Arbitrage calculator</b><span>Check any single trade step by step: fair forward, gap, direction, costs and tax.</span></a>
+    <a class="card" href="invest.html"><b>Investment calculator</b><span>Your capital, pair and country in — gross, after-cost and after-tax profit out, with a country comparison.</span></a>
   </section>
-
-  <section class="panel">
-    <h2>How the engine works</h2>
-    <div class="steps">
-      <div><b>Inputs</b>spot rate, market forward rate, the two interest rates, number of days</div>
-      <div><b>Fair rate</b>work out the fair forward rate from spot and the two interest rates</div>
-      <div><b>Compare</b>fair forward vs market forward — the gap is the opportunity</div>
-      <div><b>Trade</b>borrow one currency, invest in the other, lock the exchange rate with a forward</div>
-      <div><b>Costs</b>spreads, funding, margin and fees, taken off one by one</div>
-      <div><b>Tax</b>the gain taxed the way each country treats it</div>
-      <div><b>Check</b>a gap that looks too good usually means bad data, not free money</div>
-    </div>
-  </section>
-  <p class="foot">The exchange rate is locked in advance, so there is no currency risk. Tax rates are placeholders; verify before use.</p>
+  <p class="foot">Illustrative interest rates; verify before use. Source code, Python engine and Excel workbook on GitHub.</p>
 </div>
-<script>
-const F = FX.fmt, N = 1e6;
-let h = `<tr><th>Pair</th><th>Spot</th><th>Fair forward</th><th>Market forward</th><th>Gap</th><th>Trade</th><th>Gross</th><th>After costs</th><th>Result</th><th>Check</th></tr>`;
-for (const p of FX.PAIRS) { const r = FX.run(p, FX.COSTS[p.cost], N); const cls = r.verdict === "Arbitrage survives costs" ? "good" : (r.verdict === "No arbitrage" ? "warn" : "bad");
-  h += `<tr><td><b>${p.pair}</b><br><span class="note">${FX.COSTS[p.cost].name}</span></td><td>${F.px(p.spot, p.pair)}</td><td>${F.px(r.a.f, p.pair)}</td><td>${F.px(p.fwd, p.pair)}</td><td>${F.sgn(r.a.bps.toFixed(2))} bp</td><td style="text-align:left;font-size:12px">${r.a.dir === "none" ? "—" : (r.dir === "borrow_quote" ? `borrow ${r.m.quote}, sell ${r.m.base} fwd` : `borrow ${r.m.base}, buy ${r.m.base} fwd`)}</td><td>${F.n2(r.gross)} ${r.ccy}</td><td>${F.n2(r.net)} ${r.ccy}</td><td><span class="pill ${cls}">${r.verdict}</span></td><td>${r.a.flags.length ? '<span class="pill warn">red flag</span>' : '<span class="pill neu">OK</span>'}</td></tr>`; }
-document.getElementById("summary").innerHTML = h;
-</script>
+<script src="monitor.js"></script>
 </body>
 </html>

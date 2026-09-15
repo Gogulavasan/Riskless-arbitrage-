@@ -4,25 +4,25 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Arbitrage Calculator — Arbitrage Insights</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="theme.css">
 <script src="engine.js"></script>
 <style>
   .presets{display:flex;flex-wrap:wrap;gap:8px}
-  .step{margin:0 0 8px} .step b{color:var(--cyan)}
+  .step{margin:0 0 8px} .step b{color:var(--accent)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <nav class="nav">
-  <a class="brand" href="index.html">ARBITRAGE <span>INSIGHTS</span></a>
-  <a class="item" href="index.html">Home</a>
+  <a class="brand" href="index.html">Arbitrage <span>Insights</span></a>
+  <a class="item" href="index.html">Live Monitor</a>
   <a class="item" href="calculator.html" aria-current="page">Arbitrage Calculator</a>
   <a class="item" href="invest.html">Investment Calculator</a>
   <a class="item" href="https://github.com/Gogulavasan/Riskless-arbitrage-">GitHub</a>
 </nav>
   <div>
-    <h1 class="page">ARBITRAGE <span>CALCULATOR</span></h1>
+    <h1 class="page">Arbitrage calculator</h1>
     <p class="lede">Enter a currency pair, the number of days, today's spot rate, the market forward rate and the two interest rates. The calculator works out the fair forward rate, the gap, which way to trade, and what is left after costs and tax. The exchange rate is locked in advance, so there is no currency risk.</p>
   </div>
 
@@ -99,7 +99,7 @@ function run() {
   h += `<p class="step"><b>Step 5 · Costs, one by one</b> (per ${F.n2(N)} ${ccy} borrowed)</p>`;
   const maxabs = Math.max(...r.wf.map(x => Math.abs(x[1])), 1e-9);
   h += `<div class="tscroll"><table><tr><th>Layer</th><th>Cumulative profit (${ccy})</th><th>Erosion</th><th style="width:30%"></th></tr>`;
-  r.wf.forEach(([l, v], i) => { const d = i ? v - r.wf[i - 1][1] : 0; const w = Math.abs(v) / maxabs * 50; h += `<tr><td>${l}</td><td>${F.n2(v)}</td><td>${i ? F.sgn(F.n2(d)) : ""}</td><td><div class="bar"><i style="${v >= 0 ? `left:50%;width:${w}%;background:var(--cyan)` : `right:50%;width:${w}%;background:var(--magenta)`}"></i></div></td></tr>`; });
+  r.wf.forEach(([l, v], i) => { const d = i ? v - r.wf[i - 1][1] : 0; const w = Math.abs(v) / maxabs * 50; h += `<tr><td>${l}</td><td>${F.n2(v)}</td><td>${i ? F.sgn(F.n2(d)) : ""}</td><td><div class="bar"><i style="${v >= 0 ? `left:50%;width:${w}%;background:var(--accent)` : `right:50%;width:${w}%;background:var(--bad)`}"></i></div></td></tr>`; });
   h += `</table></div><p class="note">You get back ${F.n2(full.final)} and owe ${F.n2(full.owed)}: gross ${F.n2(full.gross)}; after margin and fees ${F.n2(full.net)} · ${F.sgn(r.netbp.toFixed(2))} bp per year on the amount borrowed</p>`;
   h += `<p class="step"><b>Step 6 · Result after costs:</b> <span class="pill ${vcls}">${r.verdict}</span></p>`;
   h += `<p class="step"><b>Step 7 · Tax.</b> Taxable pieces: interest earned ${F.n2(full.i_earn)} · interest paid ${F.n2(full.i_pay)} · margin + fees ${F.n2(full.margin + full.fees)} · FX result on principal ${F.sgn(F.n2(full.fx))}</p>`;
