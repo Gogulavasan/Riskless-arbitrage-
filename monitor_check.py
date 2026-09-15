@@ -4,10 +4,13 @@ Reads monitor_config.json, fetches live spot, computes fair vs market forward fo
 same engine as the website (fx_arbitrage.py), writes signals.json (+ signals_history.json), and sends a
 Telegram message when an opportunity appears and quotes_are_real is true.
 
-Environment (optional): TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID.
+Environment (all optional):
+  TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID           -> Telegram message
+  GMAIL_USER, GMAIL_APP_PASSWORD, ALERT_EMAIL_TO  -> email via Gmail SMTP (App Password, not your login password)
 Run locally:  python monitor_check.py
 """
-import json, os, sys, urllib.request, datetime as dt
+import json, os, sys, urllib.request, datetime as dt, smtplib, ssl
+from email.message import EmailMessage
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -97,23 +100,51 @@ def main():
     notify(alerts, source, when)
 
 
+def alert_text(alerts, source, when):
+    lines = ["FX arbitrage alert"] + [
+        f"{a['pair']}: {a['net_bp']:+.2f} bp/yr after costs — " +
+        (f"borrow {a['pair'].split('/')[1]}, sell {a['pair'].split('/')[0]} fwd" if a["direction"] == "borrow_quote" else f"borrow {a['pair'].split('/')[0]}, buy {a['pair'].split('/')[0]} fwd") +
+        f" (spot {a['spot']:.5g}, gap {a['gap_bp']:+.2f} bp)" for a in alerts
+    ] + ["", f"quotes as of {CFG['quotes_as_of']} · spot {source} {when}",
+         "https://gogulavasan.github.io/Riskless-arbitrage-/"]
+    return "\n".join(lines)
+
+
 def notify(alerts, source, when):
+    if not alerts:
+        return
+    if not CFG["quotes_are_real"]:
+        print("opportunities found but quotes_are_real is false — no notification sent (sample quotes)")
+        return
+    text = alert_text(alerts, source, when)
+    # --- Telegram
     tok, chat = os.environ.get("TELEGRAM_BOT_TOKEN"), os.environ.get("TELEGRAM_CHAT_ID")
-    if alerts and CFG["quotes_are_real"] and tok and chat:
-        lines = ["FX arbitrage alert"] + [
-            f"{a['pair']}: {a['net_bp']:+.2f} bp/yr after costs — " +
-            (f"borrow {a['pair'].split('/')[1]}, sell {a['pair'].split('/')[0]} fwd" if a["direction"] == "borrow_quote" else f"borrow {a['pair'].split('/')[0]}, buy {a['pair'].split('/')[0]} fwd") +
-            f" (spot {a['spot']:.5g}, gap {a['gap_bp']:+.2f} bp)" for a in alerts
-        ] + [f"quotes as of {CFG['quotes_as_of']} · spot {source} {when}"]
-        body = json.dumps({"chat_id": chat, "text": "\n".join(lines)}).encode()
+    if tok and chat:
+        body = json.dumps({"chat_id": chat, "text": text}).encode()
         req = urllib.request.Request(f"https://api.telegram.org/bot{tok}/sendMessage", data=body, headers={"Content-Type": "application/json"})
         try:
             urllib.request.urlopen(req, timeout=15)
             print("telegram sent")
         except Exception as e:  # noqa: BLE001
             print("telegram failed:", e)
-    elif alerts and not CFG["quotes_are_real"]:
-        print("opportunities found but quotes_are_real is false — no notification sent (sample quotes)")
+    # --- Gmail (SMTP with an App Password; requires 2-Step Verification on the Google account)
+    user, pw, to = os.environ.get("GMAIL_USER"), os.environ.get("GMAIL_APP_PASSWORD"), os.environ.get("ALERT_EMAIL_TO")
+    if user and pw:
+        msg = EmailMessage()
+        pairs = ", ".join(f"{a['pair']} {a['net_bp']:+.1f} bp" for a in alerts)
+        msg["Subject"] = f"FX arbitrage: {pairs}"
+        msg["From"] = user
+        msg["To"] = to or user
+        msg.set_content(text)
+        try:
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl.create_default_context(), timeout=20) as smtp:
+                smtp.login(user, pw)
+                smtp.send_message(msg)
+            print("email sent to", msg["To"])
+        except Exception as e:  # noqa: BLE001
+            print("email failed:", e)
+    if not (tok and chat) and not (user and pw):
+        print("opportunity found but no notification channel is configured (add Telegram or Gmail secrets)")
 
 
 if __name__ == "__main__":
