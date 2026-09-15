@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: monitor
@@ -15,6 +17,9 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,9 +30,32 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python monitor_check.py
-      - name: Publish signals.json
+      - name: Commit signals.json if it changed
+        id: commit
         run: |
           git config user.name "arbitrage-monitor"
           git config user.email "monitor@users.noreply.github.com"
           git add signals.json signals_history.json
-          if git diff --cached --quiet; then echo "no change"; else git commit -m "monitor: update signals" && git push; fi
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"; echo "no change"
+          else
+            git commit -m "monitor: update signals"
+            # main may have moved on (e.g. this is a re-run of an older run): rebase our one commit on top, keeping our signals
+            git pull --rebase -X theirs origin main
+            git push origin HEAD:main
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      # A push made by the workflow's own token does not trigger the Pages workflow,
+      # so publish the site from here when the signals changed.
+      - name: Setup Pages
+        if: steps.commit.outputs.changed == 'true'
+        uses: actions/configure-pages@v5
+      - name: Upload site
+        if: steps.commit.outputs.changed == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+      - name: Deploy to GitHub Pages
+        if: steps.commit.outputs.changed == 'true'
+        id: deployment
+        uses: actions/deploy-pages@v5
