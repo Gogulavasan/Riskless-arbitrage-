@@ -1,99 +1,760 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Arbitrage Insights</title>
-<meta name="description" content="Live FX arbitrage monitor — compares the fair forward rate with your market forward quotes using live spot rates, and alerts when a gap survives costs.">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="theme.css">
-<script src="engine.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Client Relationship Tracker</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Karla:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-  .head{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:end} @media(max-width:800px){.head{grid-template-columns:1fr}}
-  .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .status{font-size:12px;color:var(--mute);font-family:var(--mono)}
-  #banner{border-left:4px solid var(--good);background:var(--good-soft);padding:12px 14px;border-radius:6px;font-size:14px}
-  tr.opp td{background:var(--good-soft)}
-  td.good{color:var(--good)} td.bad{color:var(--bad)}
-  .logrow{display:grid;grid-template-columns:90px 1fr;gap:12px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px} .logrow:last-child{border-bottom:0}
-  details.settings summary{cursor:pointer;font-weight:600;font-size:14px;list-style:none;display:flex;align-items:center;gap:8px} details.settings summary::after{content:"▾";color:var(--mute);margin-left:auto} details[open].settings summary::after{content:"▴"}
-  .how{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-  .how div{background:var(--card2);border:1px solid var(--line);border-radius:6px;padding:12px;font-size:13px;color:var(--mute)} .how b{color:var(--ink);display:block;margin-bottom:4px}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;text-decoration:none;color:var(--ink);display:grid;gap:6px} .card:hover{border-color:var(--accent)} .card b{color:var(--accent)} .card span{color:var(--mute);font-size:13px}
+html{padding:0;margin:0}body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+
+/* Layout: sticky command bar > summary strip > filter toolbar > client list, with a right-side detail drawer that becomes a full sheet on phones. */
+:root{
+  --bg:#F4F6F8;
+  --surface:#FFFFFF;
+  --surface-2:#EAEEF2;
+  --line:#D6DDE4;
+  --fg:#151A21;
+  --fg-dim:#5C6875;
+  --accent:#0E6F78;
+  --accent-soft:#D7EBEE;
+  --good:#1B7340;
+  --warn:#8F5A06;
+  --bad:#A93A2C;
+  --on-accent:#FFFFFF;
+  --shadow:0 1px 2px rgba(20,30,40,.06),0 8px 24px rgba(20,30,40,.08);
+  --font-display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --font-body:"Karla","Helvetica Neue",Arial,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#101419; --surface:#191F26; --surface-2:#222A33; --line:#2D3742;
+    --fg:#E7EDF3; --fg-dim:#94A2B0; --accent:#35C2CE; --accent-soft:#11323A;
+    --good:#4FBF7B; --warn:#D7A03C; --bad:#E5715F; --on-accent:#07161A;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.45);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101419; --surface:#191F26; --surface-2:#222A33; --line:#2D3742;
+  --fg:#E7EDF3; --fg-dim:#94A2B0; --accent:#35C2CE; --accent-soft:#11323A;
+  --good:#4FBF7B; --warn:#D7A03C; --bad:#E5715F; --on-accent:#07161A;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.45);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+
+/* ---- command bar ---- */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.bar-in{max-width:1180px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.bar h1{font-size:18px;font-weight:700;letter-spacing:-.01em}
+.bar .sub{color:var(--fg-dim);font-size:12.5px;margin-top:1px}
+.bar-sp{flex:1 1 40px}
+.sync{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--fg-dim);white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--fg-dim);flex:none}
+.dot.live{background:var(--good)}
+.dot.busy{background:var(--warn)}
+.dot.off{background:var(--bad)}
+.btn{background:var(--surface-2);border:1px solid var(--line);border-radius:7px;padding:8px 13px;font-weight:600;font-size:13.5px}
+.btn:hover{border-color:var(--accent)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn-quiet{background:none;border-color:transparent;color:var(--fg-dim)}
+.btn-danger{color:var(--bad);border-color:var(--line);background:none}
+
+/* ---- page ---- */
+.page{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:18px 64px}
+.notice{border:1px solid var(--line);background:var(--surface);border-left:3px solid var(--warn);border-radius:8px;padding:11px 14px;font-size:13.5px;color:var(--fg-dim);margin-bottom:16px}
+
+/* ---- summary ---- */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin-bottom:18px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0}
+.tile .k{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-dim);font-weight:600}
+.tile .v{font-family:var(--font-display);font-size:26px;font-weight:700;margin-top:4px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.tile .v small{font-size:13px;font-weight:500;color:var(--fg-dim);font-family:var(--font-body)}
+.tile.due .v{font-size:19px}
+
+/* ---- toolbar ---- */
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.search{flex:1 1 220px;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:600;color:var(--fg-dim)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+
+/* ---- list ---- */
+.list{display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:minmax(0,2.3fr) minmax(0,1fr) auto minmax(0,1.2fr) auto minmax(0,1.1fr);
+  gap:12px;align-items:center;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);
+  border-radius:10px;padding:12px 14px}
+.row:hover{border-color:var(--accent)}
+.row[aria-current="true"]{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.who{min-width:0}
+.who b{font-family:var(--font-display);font-weight:600;font-size:15px}
+.who span{display:block;color:var(--fg-dim);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cell-dim{color:var(--fg-dim);font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{display:inline-block;border-radius:6px;padding:3px 8px;font-size:11.5px;font-weight:700;border:1px solid transparent;white-space:nowrap}
+.pill.good{color:var(--good);background:color-mix(in srgb,var(--good) 12%,transparent);border-color:color-mix(in srgb,var(--good) 35%,transparent)}
+.pill.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 13%,transparent);border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
+.pill.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent);border-color:color-mix(in srgb,var(--bad) 35%,transparent)}
+.pill.mute{color:var(--fg-dim);background:var(--surface-2);border-color:var(--line)}
+.pill.prio{font-family:var(--font-data);letter-spacing:.02em}
+.meter{display:flex;gap:3px;align-items:center}
+.meter i{width:7px;height:14px;border-radius:2px;background:var(--surface-2);border:1px solid var(--line)}
+.meter i.on{background:var(--accent);border-color:var(--accent)}
+.due{font-size:13px;text-align:right}
+.due .d{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+.due .late{color:var(--bad);font-weight:600;font-size:11.5px;display:block}
+.due .soon{color:var(--warn);font-weight:600;font-size:11.5px;display:block}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:34px 20px;text-align:center}
+.empty h3{font-size:17px;margin-bottom:6px}
+.empty p{color:var(--fg-dim);font-size:13.5px;max-width:46ch;margin:0 auto 14px}
+
+/* ---- drawer ---- */
+.scrim{position:fixed;inset:0;background:rgba(10,14,18,.42);z-index:30}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);z-index:31;background:var(--surface);
+  border-left:1px solid var(--line);box-shadow:var(--shadow);display:flex;flex-direction:column}
+.dr-head{padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top,0px));border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start}
+.dr-head h2{font-size:16px;font-weight:700;min-width:0;overflow-wrap:anywhere}
+.dr-head .stamp{color:var(--fg-dim);font-size:11.5px;margin-top:3px}
+.dr-body{overflow-y:auto;padding:14px 16px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:13px}
+.f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.f>label{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-dim);font-weight:700}
+.f input,.f select,.f textarea{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:9px 10px;width:100%}
+.f textarea{min-height:88px;resize:vertical;line-height:1.45}
+.f input:disabled,.f select:disabled,.f textarea:disabled{opacity:.6}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.prods{display:flex;flex-wrap:wrap;gap:6px}
+.dr-foot{border-top:1px solid var(--line);padding:11px 16px;padding-bottom:calc(11px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;align-items:center}
+.saved{font-size:12px;color:var(--fg-dim);flex:1}
+
+@media (max-width:820px){
+  .row{grid-template-columns:1fr auto;gap:8px 10px}
+  .row .cell-city{display:none}
+  .who{grid-column:1/2}
+  .due{grid-column:2/3;text-align:right}
+  .row .pill-status{grid-column:1/2;justify-self:start}
+  .row .meter{grid-column:2/3;justify-self:end}
+  .row .pill-prio{display:none}
+  .pair{grid-template-columns:1fr}
+}
+
+.me-box{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:rgba(10,14,18,.42);padding:16px}
+.me-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:20px;width:min(380px,100%)}
+.me-card h2{font-size:16px;margin-bottom:6px}
+.me-card p{color:var(--fg-dim);font-size:13.5px;margin:0 0 12px}
+.me-card input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:10px}
+.me-card .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <nav class="nav">
-    <a class="brand" href="index.html">Arbitrage <span>Insights</span></a>
-    <a class="item" href="index.html" aria-current="page">Live Monitor</a>
-    <a class="item" href="calculator.html">Arbitrage Calculator</a>
-    <a class="item" href="invest.html">Investment Calculator</a>
-    <a class="item" href="https://github.com/Gogulavasan/Riskless-arbitrage-">GitHub</a>
-  </nav>
-
-  <div class="head">
+<div class="bar">
+  <div class="bar-in">
     <div>
-      <h1 class="page">Live FX arbitrage monitor</h1>
-      <p class="lede">Watches your currency pairs using live spot rates. For each pair it works out the fair forward rate, compares it with your market forward quote, takes off trading costs, and raises an alert the moment a gap is worth acting on.</p>
+      <h1>Client Relationship Tracker</h1>
+      <div class="sub">Post-call status and follow-ups</div>
     </div>
-    <div class="actions">
-      <button class="primary" id="notifyBtn">Enable browser alerts</button>
-      <button id="refreshBtn">Refresh now</button>
-      <span class="status" id="feedStatus">loading…</span>
-      <span class="status">· next check in <span id="next">–</span>s</span>
-    </div>
+    <div class="bar-sp"></div>
+    <div class="sync"><span class="dot" id="dot"></span><span id="syncText">Connecting…</span></div>
+    <button class="btn btn-quiet" id="meBtn" title="Name shown on your edits">Set my name</button>
+    <button class="btn" id="importBtn">Import CSV</button>
+    <input type="file" id="importFile" accept=".csv,text/csv" hidden>
+    <button class="btn" id="exportBtn">Export CSV</button>
+    <button class="btn btn-primary" id="addBtn">Add client</button>
   </div>
-
-  <div id="banner" hidden></div>
-  <div id="quoteBadge"></div>
-  <section class="kpis" id="kpis"></section>
-
-  <section class="panel">
-    <h2>Watched pairs<small>spot is live · forward points and interest rates are yours (Settings) · after-cost gap is in basis points per year on the amount borrowed</small></h2>
-    <div class="tscroll"><table id="tbl"></table></div>
-  </section>
-
-  <div class="grid2">
-    <section class="panel">
-      <h2>Alert log<small>this session, newest first</small></h2>
-      <div id="log"></div>
-    </section>
-    <section class="panel">
-      <h2>Get alerts when this page is closed</h2>
-      <p class="note" style="margin:0 0 8px">Browser alerts only work while the tab is open. For alerts on your phone, the repository includes a checker that runs every 15 minutes on GitHub and messages a Telegram chat when an opportunity appears. Setup takes about five minutes:</p>
-      <ol class="note" style="margin:0;padding-left:18px;display:grid;gap:4px">
-        <li>In Telegram, create a bot with <b>@BotFather</b> and copy its token; send your bot one message, then read your chat id from <code>https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code>.</li>
-        <li>In the GitHub repo: Settings → Secrets and variables → Actions → add <code>TELEGRAM_BOT_TOKEN</code> and <code>TELEGRAM_CHAT_ID</code>.</li>
-        <li>Put your real forward points in <code>monitor_config.json</code> and set <code>quotes_are_real</code> to true. The checker uses the same file as this page.</li>
-      </ol>
-    </section>
-  </div>
-
-  <details class="settings panel" id="settings">
-    <summary>Settings — interest rates, your forward quotes, alert threshold</summary>
-    <div id="settingsBody" style="margin-top:12px"></div>
-  </details>
-
-  <section class="panel">
-    <h2>How it works</h2>
-    <div class="how">
-      <div><b>1 · Live spot</b>The current exchange rate is pulled from a public feed every minute.</div>
-      <div><b>2 · Fair forward</b>From spot and the two interest rates, the rate at which a forward should trade.</div>
-      <div><b>3 · Your quote</b>Your broker's forward points are added to spot to get the market forward.</div>
-      <div><b>4 · Gap and costs</b>Market minus fair is the gap; spreads, funding and fees are taken off.</div>
-      <div><b>5 · Alert</b>If what is left is above your threshold, you get a banner, a sound and a browser notification.</div>
-    </div>
-    <p class="note" style="margin:12px 0 0">Forward quotes are the one input no free feed provides, so the page ships with sample values and stays in "sample" mode until you enter real quotes. In major pairs a genuine gap after costs is rare and small; a large one usually means a stale quote or a currency with capital controls. Not investment advice.</p>
-  </section>
-
-  <section class="cards">
-    <a class="card" href="calculator.html"><b>Arbitrage calculator</b><span>Check any single trade step by step: fair forward, gap, direction, costs and tax.</span></a>
-    <a class="card" href="invest.html"><b>Investment calculator</b><span>Your capital, pair and country in — gross, after-cost and after-tax profit out, with a country comparison.</span></a>
-  </section>
-  <p class="foot">Illustrative interest rates; verify before use. Source code, Python engine and Excel workbook on GitHub.</p>
 </div>
-<script src="monitor.js"></script>
+
+<div class="page">
+  <div class="notice" id="notice" hidden></div>
+
+  <section class="tiles" aria-label="Summary">
+    <div class="tile"><div class="k">Total clients</div><div class="v num" id="tTotal">—</div></div>
+    <div class="tile"><div class="k">Interested</div><div class="v num" id="tInterested">—</div></div>
+    <div class="tile"><div class="k">In follow-up</div><div class="v num" id="tFollow">—</div></div>
+    <div class="tile"><div class="k">Avg. potential</div><div class="v num" id="tAvg">—<small> / 5</small></div></div>
+    <div class="tile"><div class="k">Emails sent</div><div class="v num" id="tSent">—</div></div>
+    <div class="tile"><div class="k">Awaiting reply</div><div class="v num" id="tAwait">—</div></div>
+    <div class="tile due"><div class="k">Next follow-up</div><div class="v num" id="tNext">—</div></div>
+  </section>
+
+  <div class="toolbar">
+    <input class="search" id="q" type="search" placeholder="Search name, company, city or notes" autocomplete="off">
+    <div class="chips" id="filters" role="group" aria-label="Filter by status"></div>
+  </div>
+
+  <div class="list" id="list"></div>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Client detail">
+  <div class="dr-head">
+    <div style="flex:1;min-width:0">
+      <h2 id="drTitle">Client</h2>
+      <div class="stamp" id="drStamp"></div>
+    </div>
+    <button class="btn btn-quiet" id="drClose" aria-label="Close">Close</button>
+  </div>
+  <div class="dr-body">
+    <div class="pair">
+      <div class="f"><label for="f-name">Client name</label><input id="f-name" data-field="name" autocomplete="off"></div>
+      <div class="f"><label for="f-company">Company</label><input id="f-company" data-field="company" autocomplete="off"></div>
+    </div>
+    <div class="pair">
+      <div class="f"><label for="f-city">City / state</label><input id="f-city" data-field="city" autocomplete="off"></div>
+      <div class="f"><label for="f-priority">Priority</label><select id="f-priority" data-field="priority"></select></div>
+    </div>
+    <div class="pair">
+      <div class="f"><label for="f-phone">Phone</label><input id="f-phone" data-field="phone" inputmode="tel" autocomplete="off"></div>
+      <div class="f"><label for="f-email">Email</label><input id="f-email" data-field="email" inputmode="email" autocomplete="off"></div>
+    </div>
+    <div class="f"><label>Product fit</label><div class="prods" id="f-products"></div></div>
+    <div class="pair">
+      <div class="f"><label for="f-status">Current status</label><select id="f-status" data-field="status"></select></div>
+      <div class="f"><label for="f-potential">Potential (0–5)</label><select id="f-potential" data-field="potential"></select></div>
+    </div>
+    <div class="pair">
+      <div class="f"><label for="f-relationship">Relationship</label><select id="f-relationship" data-field="relationship"></select></div>
+      <div class="f"><label for="f-response">Response status</label><select id="f-response" data-field="response"></select></div>
+    </div>
+    <div class="f"><label for="f-followUp">Next follow-up</label><input id="f-followUp" type="date" data-field="followUp"></div>
+    <div class="f"><label>Outreach (logged automatically when an email is sent)</label></div>
+    <div class="pair">
+      <div class="f"><label for="f-outreachStage">Outreach stage</label><select id="f-outreachStage" data-field="outreachStage"></select></div>
+      <div class="f"><label for="f-emailsSent">Emails sent</label><input id="f-emailsSent" type="number" min="0" data-field="emailsSent"></div>
+    </div>
+    <div class="pair">
+      <div class="f"><label for="f-firstEmailDate">First email</label><input id="f-firstEmailDate" type="date" data-field="firstEmailDate"></div>
+      <div class="f"><label for="f-lastEmailDate">Last email</label><input id="f-lastEmailDate" type="date" data-field="lastEmailDate"></div>
+    </div>
+    <div class="f"><label for="f-emailSubject">Last subject line</label><input id="f-emailSubject" data-field="emailSubject" autocomplete="off"></div>
+    <div class="f"><label for="f-leadSource">Why we reached out (trigger + source)</label><textarea id="f-leadSource" data-field="leadSource"></textarea></div>
+    <div class="f"><label for="f-researchNotes">Research used in the email</label><textarea id="f-researchNotes" data-field="researchNotes"></textarea></div>
+    <div class="f"><label for="f-notes">Notes / next steps</label><textarea id="f-notes" data-field="notes"></textarea></div>
+  </div>
+  <div class="dr-foot">
+    <span class="saved" id="drSaved"></span>
+    <button class="btn btn-danger" id="drDelete">Delete</button>
+  </div>
+</aside>
+
+
+<div class="me-box" id="meBox" hidden>
+  <div class="me-card">
+    <h2>Your name</h2>
+    <p>Shown next to the clients you edit, so the team knows who updated what. Saved on this device only.</p>
+    <input id="meName" placeholder="e.g. Gogul" maxlength="40" autocomplete="off">
+    <div class="acts"><button class="btn" id="meCancel">Skip</button><button class="btn btn-primary" id="meSave">Save</button></div>
+  </div>
+</div>
+
+<script src="firebase-config.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+window.FB={initializeApp,getFirestore,collection,doc,setDoc,updateDoc,deleteDoc,onSnapshot,writeBatch};
+window.dispatchEvent(new Event("fb-ready"));
+</script>
+<script>
+function startTracker(){
+
+(function(){
+  "use strict";
+  var FB=window.FB;
+  var STATUS = ["New","Ongoing","Interested","Most likely accept","Not interested","Closed — won","Closed — lost"];
+  var RELATION = ["","Smooth","Neutral","Poor"];
+  var RESPONSE = ["","In follow-up","Awaiting reply","No follow-up"];
+  var PRIORITY = ["","A — Hot","B — High","C — Medium"];
+  var PRODUCTS = ["Photo Booth","Strike-X","Racing Sim","Dome","Escape Rooms","Other"];
+  var OUTSTAGE = ["","Drafted","Email sent","Follow-up 1 sent","Follow-up 2 sent","Replied","Opted out"];
+  var POSITIVE = {"Interested":1,"Most likely accept":1,"Closed — won":1};
+
+  var db=null, myId=null, myName="", canWrite=null;
+  var clients=new Map(), selected=null, filter="All", query="";
+  var writeChains=new Map(), pending=new Map();
+
+  var el=function(id){return document.getElementById(id);};
+  var listEl=el("list"), drawer=el("drawer"), scrim=el("scrim");
+
+  /* ---------- helpers ---------- */
+  function esc(s){return String(s==null?"":s);}
+  function todayISO(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+  function fmtDate(iso){
+    if(!iso) return "";
+    var p=String(iso).slice(0,10).split("-");
+    if(p.length!==3) return String(iso);
+    var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][Number(p[1])-1]||"";
+    return p[2]+" "+m+" "+p[0];
+  }
+  function daysBetween(a,b){
+    var A=Date.UTC(+a.slice(0,4),+a.slice(5,7)-1,+a.slice(8,10));
+    var B=Date.UTC(+b.slice(0,4),+b.slice(5,7)-1,+b.slice(8,10));
+    return Math.round((A-B)/86400000);
+  }
+  function ago(iso){
+    if(!iso) return "";
+    var s=Math.floor((Date.now()-new Date(iso).getTime())/1000);
+    if(isNaN(s)) return "";
+    if(s<60) return "just now";
+    if(s<3600) return Math.floor(s/60)+"m ago";
+    if(s<86400) return Math.floor(s/3600)+"h ago";
+    return fmtDate(String(iso).slice(0,10));
+  }
+  function statusTone(s){
+    if(POSITIVE[s]) return "good";
+    if(s==="Not interested"||s==="Closed — lost") return "bad";
+    if(s==="Ongoing") return "warn";
+    return "mute";
+  }
+  function setSync(kind,text){
+    var d=el("dot"); d.className="dot"+(kind?" "+kind:""); el("syncText").textContent=text;
+  }
+  function blank(){
+    return {name:"",company:"",city:"",phone:"",email:"",priority:"",products:[],
+      status:"New",potential:0,relationship:"",response:"",followUp:"",notes:"",
+      outreachStage:"",emailsSent:0,firstEmailDate:"",lastEmailDate:"",emailSubject:"",leadSource:"",researchNotes:"",
+      createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  }
+
+  /* ---------- writes: one at a time per document ---------- */
+  function patch(id,fields){
+    if(!db||canWrite===false) return Promise.resolve();
+    var c=clients.get(id)||{};
+    Object.keys(fields).forEach(function(k){ c[k]=fields[k]; });
+    clients.set(id,c);
+    fields.updatedAt=new Date().toISOString();
+    fields.updatedBy=myId; fields.updatedByName=myName;
+    var prev=writeChains.get(id)||Promise.resolve();
+    var next=prev.catch(function(){}).then(function(){
+      return FB.updateDoc(FB.doc(db,"clients",id),fields);
+    }).then(function(){
+      if(selected===id) el("drSaved").textContent="Saved "+new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+    }).catch(function(e){
+      if(e&&e.code==="permission-denied"){ canWrite=false; applyWritable(); el("drSaved").textContent="Read-only — the database rules don't allow edits."; }
+      else if(selected===id){ el("drSaved").textContent="Not saved — check the connection and retry."; }
+    });
+    writeChains.set(id,next);
+    return next;
+  }
+  function debouncedPatch(id,field,value){
+    var key=id+"|"+field;
+    clearTimeout(pending.get(key));
+    el("drSaved").textContent="Saving…";
+    pending.set(key,setTimeout(function(){ pending.delete(key); var f={}; f[field]=value; patch(id,f); },500));
+  }
+
+  /* ---------- summary ---------- */
+  function renderTiles(all){
+    var total=all.length;
+    var interested=all.filter(function(c){return POSITIVE[c.status];}).length;
+    var follow=all.filter(function(c){return c.response==="In follow-up";}).length;
+    var scored=all.filter(function(c){return Number(c.potential)>0;});
+    var avg=scored.length?(scored.reduce(function(s,c){return s+Number(c.potential);},0)/scored.length):0;
+    var t=todayISO();
+    var upcoming=all.map(function(c){return c.followUp;}).filter(function(d){return d&&d>=t;}).sort();
+    el("tTotal").textContent=total;
+    el("tInterested").textContent=interested;
+    el("tFollow").textContent=follow;
+    el("tAvg").innerHTML=(scored.length?avg.toFixed(1):"—")+'<small> / 5</small>';
+    el("tNext").textContent=upcoming.length?fmtDate(upcoming[0]):"None set";
+    el("tSent").textContent=all.reduce(function(n,c){return n+(Number(c.emailsSent)||0);},0);
+    el("tAwait").textContent=all.filter(function(c){return c.outreachStage&&c.outreachStage!=="Replied"&&c.outreachStage!=="Opted out"&&c.outreachStage!=="Drafted";}).length;
+  }
+
+  /* ---------- list ---------- */
+  function sortRows(a,b){
+    var ad=a[1].followUp||"9999-99-99", bd=b[1].followUp||"9999-99-99";
+    if(ad!==bd) return ad<bd?-1:1;
+    var ap=(a[1].priority||"Z"), bp=(b[1].priority||"Z");
+    if(ap!==bp) return ap<bp?-1:1;
+    return String(a[1].name||a[1].company||"").localeCompare(String(b[1].name||b[1].company||""));
+  }
+  function matches(c){
+    if(filter==="Interested"&&!POSITIVE[c.status]) return false;
+    if(filter==="In follow-up"&&c.response!=="In follow-up") return false;
+    if(filter==="Overdue"){ var t=todayISO(); if(!(c.followUp&&c.followUp<t)) return false; }
+    if(filter==="Not interested"&&!(c.status==="Not interested"||c.status==="Closed — lost")) return false;
+    if(filter==="Emailed"&&!(Number(c.emailsSent)>0)) return false;
+    if(filter==="Replied"&&c.outreachStage!=="Replied") return false;
+    if(!query) return true;
+    var hay=[c.name,c.company,c.city,c.notes,c.email,c.phone,c.emailSubject,c.leadSource,c.researchNotes].join(" ").toLowerCase();
+    return hay.indexOf(query)>-1;
+  }
+  function render(){
+    var all=Array.from(clients.values());
+    renderTiles(all);
+    var rows=Array.from(clients.entries()).filter(function(e){return matches(e[1]);}).sort(sortRows);
+    listEl.textContent="";
+    if(!rows.length){
+      var d=document.createElement("div"); d.className="empty";
+      var h=document.createElement("h3"); var p=document.createElement("p");
+      if(!clients.size){
+        h.textContent="No clients yet";
+        p.textContent="Add the first client and it appears here on every device signed in to this page — phone, laptop, anyone you share it with.";
+      } else {
+        h.textContent="Nothing matches this view";
+        p.textContent="Clear the search or pick a different filter to see the rest of the list.";
+      }
+      d.appendChild(h); d.appendChild(p);
+      if(!clients.size&&canWrite!==false){
+        var b=document.createElement("button"); b.className="btn btn-primary"; b.textContent="Add client";
+        b.addEventListener("click",addClient); d.appendChild(b);
+      }
+      listEl.appendChild(d); return;
+    }
+    var today=todayISO();
+    rows.forEach(function(entry){
+      var id=entry[0], c=entry[1];
+      var row=document.createElement("button");
+      row.className="row"; row.type="button";
+      if(selected===id) row.setAttribute("aria-current","true");
+      row.addEventListener("click",function(){ open(id); });
+
+      var who=document.createElement("div"); who.className="who";
+      var b=document.createElement("b"); b.textContent=c.name||"(unnamed)";
+      var s=document.createElement("span"); s.textContent=(c.company||"—")+(c.outreachStage?" · "+c.outreachStage+(c.lastEmailDate?" "+fmtDate(c.lastEmailDate):""):"");
+      who.appendChild(b); who.appendChild(s); row.appendChild(who);
+
+      var city=document.createElement("div"); city.className="cell-dim cell-city"; city.textContent=c.city||"—"; row.appendChild(city);
+
+      var prio=document.createElement("span"); prio.className="pill prio pill-prio "+(c.priority?(c.priority[0]==="A"?"bad":c.priority[0]==="B"?"warn":"mute"):"mute");
+      prio.textContent=c.priority?c.priority.split(" ")[0]:"–"; row.appendChild(prio);
+
+      var st=document.createElement("span"); st.className="pill pill-status "+statusTone(c.status); st.textContent=c.status||"New"; row.appendChild(st);
+
+      var m=document.createElement("div"); m.className="meter"; m.title="Potential "+(Number(c.potential)||0)+" of 5";
+      for(var i=1;i<=5;i++){ var dot=document.createElement("i"); if(i<=Number(c.potential||0)) dot.className="on"; m.appendChild(dot); }
+      row.appendChild(m);
+
+      var due=document.createElement("div"); due.className="due";
+      if(c.followUp){
+        var dd=document.createElement("span"); dd.className="d"; dd.textContent=fmtDate(c.followUp); due.appendChild(dd);
+        var diff=daysBetween(c.followUp,today);
+        if(diff<0){ var late=document.createElement("span"); late.className="late"; late.textContent="overdue "+Math.abs(diff)+"d"; due.appendChild(late); }
+        else if(diff<=3){ var soon=document.createElement("span"); soon.className="soon"; soon.textContent=diff===0?"today":"in "+diff+"d"; due.appendChild(soon); }
+      } else {
+        var none=document.createElement("span"); none.className="cell-dim"; none.textContent="no date"; due.appendChild(none);
+      }
+      row.appendChild(due);
+      listEl.appendChild(row);
+    });
+  }
+
+  /* ---------- drawer ---------- */
+  function fillSelect(sel,opts,labels){
+    sel.textContent="";
+    opts.forEach(function(v,i){
+      var o=document.createElement("option"); o.value=String(v);
+      o.textContent=labels?labels[i]:(v===""?"—":String(v));
+      sel.appendChild(o);
+    });
+  }
+  function buildControls(){
+    fillSelect(el("f-status"),STATUS);
+    fillSelect(el("f-relationship"),RELATION);
+    fillSelect(el("f-response"),RESPONSE);
+    fillSelect(el("f-priority"),PRIORITY);
+    fillSelect(el("f-outreachStage"),OUTSTAGE);
+    fillSelect(el("f-potential"),[0,1,2,3,4,5],["0 — none","1","2","3","4","5 — strongest"]);
+
+    var wrap=el("f-products");
+    PRODUCTS.forEach(function(p){
+      var b=document.createElement("button");
+      b.type="button"; b.className="chip"; b.textContent=p; b.setAttribute("aria-pressed","false");
+      b.addEventListener("click",function(){
+        if(!selected||canWrite===false) return;
+        var c=clients.get(selected)||{}; var list=Array.isArray(c.products)?c.products.slice():[];
+        var at=list.indexOf(p);
+        if(at>-1) list.splice(at,1); else list.push(p);
+        b.setAttribute("aria-pressed",at>-1?"false":"true");
+        patch(selected,{products:list});
+      });
+      wrap.appendChild(b);
+    });
+
+    document.querySelectorAll("[data-field]").forEach(function(input){
+      var field=input.getAttribute("data-field");
+      var isText=input.tagName==="INPUT"&&input.type!=="date"&&input.type!=="number"||input.tagName==="TEXTAREA";
+      input.addEventListener(isText?"input":"change",function(){
+        if(!selected) return;
+        var v=input.value;
+        if(field==="potential"||field==="emailsSent") v=Number(v)||0;
+        if(isText) debouncedPatch(selected,field,v);
+        else { var f={}; f[field]=v; el("drSaved").textContent="Saving…"; patch(selected,f); }
+        if(field==="name"||field==="company") el("drTitle").textContent=(el("f-name").value||el("f-company").value||"Client");
+      });
+    });
+
+    el("drClose").addEventListener("click",close);
+    scrim.addEventListener("click",close);
+    document.addEventListener("keydown",function(e){ if(e.key==="Escape"&&!drawer.hidden) close(); });
+    el("addBtn").addEventListener("click",addClient);
+    el("q").addEventListener("input",function(){ query=el("q").value.trim().toLowerCase(); render(); });
+
+    ["All","Emailed","Replied","Interested","In follow-up","Overdue","Not interested"].forEach(function(name){
+      var b=document.createElement("button");
+      b.className="chip"; b.type="button"; b.textContent=name;
+      b.setAttribute("aria-pressed",name===filter?"true":"false");
+      b.addEventListener("click",function(){
+        filter=name;
+        el("filters").querySelectorAll(".chip").forEach(function(x){ x.setAttribute("aria-pressed",x===b?"true":"false"); });
+        render();
+      });
+      el("filters").appendChild(b);
+    });
+
+    var del=el("drDelete"), armed=false, armTimer=null;
+    del.addEventListener("click",function(){
+      if(!selected||canWrite===false) return;
+      if(!armed){ armed=true; del.textContent="Tap again to delete"; armTimer=setTimeout(function(){armed=false;del.textContent="Delete";},4000); return; }
+      clearTimeout(armTimer); armed=false; del.textContent="Delete";
+      var id=selected; close();
+      FB.deleteDoc(FB.doc(db,"clients",id)).catch(function(){});
+      clients.delete(id); render();
+    });
+  }
+  function syncDrawer(){
+    if(!selected) return;
+    var c=clients.get(selected);
+    if(!c){ close(); return; }
+    el("drTitle").textContent=c.name||c.company||"Client";
+    var stamp=[];
+    if(c.updatedByName&&c.updatedBy!==myId) stamp.push("edited by "+c.updatedByName);
+    else if(c.updatedByName) stamp.push("edited by you");
+    else if(c.updatedAt) stamp.push("edited");
+    if(c.updatedAt) stamp.push(ago(c.updatedAt));
+    el("drStamp").textContent=stamp.join(" · ");
+    document.querySelectorAll("[data-field]").forEach(function(input){
+      var f=input.getAttribute("data-field");
+      if(document.activeElement===input) return;
+      var v=c[f]==null?"":String(c[f]);
+      if(input.value!==v) input.value=v;
+    });
+    var list=Array.isArray(c.products)?c.products:[];
+    el("f-products").querySelectorAll(".chip").forEach(function(b){
+      b.setAttribute("aria-pressed",list.indexOf(b.textContent)>-1?"true":"false");
+    });
+  }
+  function open(id){
+    selected=id; drawer.hidden=false; scrim.hidden=false;
+    el("drSaved").textContent=canWrite===false?"Read-only view":"Changes save as you type";
+    syncDrawer(); render(); resolveNames();
+    var n=el("f-name"); if(n&&!n.value) n.focus();
+  }
+  function close(){ selected=null; drawer.hidden=true; scrim.hidden=true; render(); }
+
+  function addClient(){
+    if(!db){ showNotice("Not connected to the database yet — check firebase-config.js."); return; }
+    if(canWrite===false){ showNotice("This tracker is read-only right now."); return; }
+    var ref=FB.doc(FB.collection(db,"clients"));
+    var body=blank(); body.updatedBy=myId; body.updatedByName=myName;
+    clients.set(ref.id,body); render();
+    FB.setDoc(ref,body).then(function(){ open(ref.id); }).catch(function(e){
+      clients.delete(ref.id); render();
+      showNotice(e&&e.code==="permission-denied"?"The database rules don't allow adding clients.":"Couldn't add the client — check the connection and try again.");
+    });
+  }
+  function showNotice(t){ var n=el("notice"); n.textContent=t; n.hidden=false; }
+  function applyWritable(){
+    var ro=canWrite===false;
+    document.querySelectorAll("[data-field]").forEach(function(i){ i.disabled=ro; });
+    el("f-products").querySelectorAll(".chip").forEach(function(b){ b.disabled=ro; });
+    el("drDelete").hidden=ro; el("addBtn").hidden=ro;
+    if(ro) showNotice("You're viewing this tracker read-only.");
+  }
+
+  function resolveNames(){}
+
+  /* ---------- CSV ---------- */
+  function csv(){
+    var cols=["Client Name","Company","City","Phone","Email","Priority","Product Fit","Current Status","Potential","Relationship","Response Status","Next Follow-up","Notes / Next Steps","Outreach Stage","Emails Sent","First Email","Last Email","Last Subject","Lead Source","Research"];
+    var q=function(v){ v=v==null?"":String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
+    var lines=[cols.join(",")];
+    Array.from(clients.entries()).sort(sortRows).forEach(function(e){
+      var c=e[1];
+      lines.push([c.name,c.company,c.city,c.phone,c.email,c.priority,(c.products||[]).join("; "),
+        c.status,c.potential,c.relationship,c.response,c.followUp,c.notes,c.outreachStage,c.emailsSent,c.firstEmailDate,c.lastEmailDate,c.emailSubject,c.leadSource,c.researchNotes].map(q).join(","));
+    });
+    return lines.join("\r\n");
+  }
+
+
+  /* ---------- CSV import ---------- */
+  function parseCSV(text){
+    var rows=[],row=[],cur="",q=false;
+    for(var i=0;i<text.length;i++){
+      var ch=text[i];
+      if(q){ if(ch==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+      else if(ch==='"') q=true;
+      else if(ch===","){ row.push(cur); cur=""; }
+      else if(ch==="\n"||ch==="\r"){ if(ch==="\r"&&text[i+1]==="\n") i++; row.push(cur); rows.push(row); row=[]; cur=""; }
+      else cur+=ch;
+    }
+    if(cur!==""||row.length){ row.push(cur); rows.push(row); }
+    return rows.filter(function(r){ return r.some(function(v){ return v.trim(); }); });
+  }
+  function norm(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]/g,""); }
+  function pickStatus(v){
+    var n=norm(v); if(!n) return "New";
+    if(n.indexOf("notint")>-1||n.indexOf("lost")>-1) return n.indexOf("closed")>-1?"Closed — lost":"Not interested";
+    if(n.indexOf("won")>-1) return "Closed — won";
+    if(n.indexOf("likely")>-1||n.indexOf("accept")>-1) return "Most likely accept";
+    if(n.indexOf("interest")>-1) return "Interested";
+    if(n.indexOf("going")>-1) return "Ongoing";
+    return "New";
+  }
+  function pickFrom(list,v){ var n=norm(v); if(!n) return ""; for(var i=0;i<list.length;i++){ if(list[i]&&norm(list[i]).indexOf(n.slice(0,4))===0) return list[i]; } return ""; }
+  function toISODate(v){
+    v=String(v||"").trim(); if(!v) return "";
+    var m=v.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return m[1]+"-"+m[2]+"-"+m[3];
+    m=v.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/); if(m) return m[3]+"-"+m[2].padStart(2,"0")+"-"+m[1].padStart(2,"0");
+    var d=new Date(v); if(!isNaN(d)) return d.toISOString().slice(0,10);
+    return "";
+  }
+  function importCSV(text){
+    var rows=parseCSV(text); if(rows.length<2){ showNotice("That CSV has no client rows."); return; }
+    var head=rows[0].map(norm);
+    var col=function(){ for(var i=0;i<arguments.length;i++){ var k=head.indexOf(norm(arguments[i])); if(k>-1) return k; } return -1; };
+    var C={name:col("Client Name","Name","Contact Person"),company:col("Company","Company Name"),city:col("City","City / State","City/State"),
+      phone:col("Phone","Contact No"),email:col("Email"),priority:col("Priority"),products:col("Product Fit","Products"),status:col("Current Status","Status"),
+      potential:col("Potential","Potential (out of 5)"),relationship:col("Relationship"),response:col("Response Status","Response"),
+      followUp:col("Next Follow-up","Next Followup","Follow-up"),notes:col("Notes / Next Steps","Notes")};
+    var g=function(r,k){ return C[k]>-1?String(r[C[k]]||"").trim():""; };
+    var batch=FB.writeBatch(db), n=0;
+    rows.slice(1).forEach(function(r){
+      if(!g(r,"name")&&!g(r,"company")) return;
+      var pot=parseInt(g(r,"potential"),10); if(isNaN(pot)) pot=0; pot=Math.max(0,Math.min(5,pot));
+      var prods=g(r,"products").split(/[;,]/).map(function(s){ return pickFrom(PRODUCTS,s); }).filter(function(s,i,a){ return s&&a.indexOf(s)===i; });
+      var pr=g(r,"priority"); pr=pr?(pr[0].toUpperCase()==="A"?"A — Hot":pr[0].toUpperCase()==="B"?"B — High":pr[0].toUpperCase()==="C"?"C — Medium":""):"";
+      var body={name:g(r,"name"),company:g(r,"company"),city:g(r,"city"),phone:g(r,"phone"),email:g(r,"email"),priority:pr,products:prods,
+        status:pickStatus(g(r,"status")),potential:pot,relationship:pickFrom(RELATION,g(r,"relationship")),response:pickFrom(RESPONSE,g(r,"response")),
+        followUp:toISODate(g(r,"followUp")),notes:g(r,"notes"),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
+        updatedBy:myId,updatedByName:myName};
+      batch.set(FB.doc(FB.collection(db,"clients")),body); n++;
+    });
+    if(!n){ showNotice("No client rows found — the first line must be a header row with at least a Client Name or Company column."); return; }
+    setSync("busy","Importing "+n+"…");
+    batch.commit().then(function(){ el("notice").hidden=true; setSync("live","Live — synced across devices"); })
+      .catch(function(){ setSync("live","Live — synced across devices"); showNotice("Import failed — check the connection and try again."); });
+  }
+  el("importBtn").addEventListener("click",function(){ if(!db) return; el("importFile").click(); });
+  el("importFile").addEventListener("change",function(){
+    var f=el("importFile").files[0]; if(!f) return;
+    var rd=new FileReader(); rd.onload=function(){ importCSV(String(rd.result||"")); el("importFile").value=""; }; rd.readAsText(f);
+  });
+  el("exportBtn").addEventListener("click",function(){
+    var blob=new Blob(["\ufeff"+csv()],{type:"text/csv;charset=utf-8"});
+    var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="client-relationship-tracker.csv";
+    document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500);
+  });
+
+  /* ---------- identity (per device) ---------- */
+  try{ myId=localStorage.getItem("crt.id"); myName=localStorage.getItem("crt.name")||""; }catch(e){}
+  if(!myId){ myId="d_"+Math.random().toString(36).slice(2,10)+Date.now().toString(36); try{ localStorage.setItem("crt.id",myId); }catch(e){} }
+  function refreshMe(){ el("meBtn").textContent=myName?("You: "+myName):"Set my name"; }
+  function openMe(){ el("meName").value=myName; el("meBox").hidden=false; el("meName").focus(); }
+  el("meBtn").addEventListener("click",openMe);
+  el("meCancel").addEventListener("click",function(){ el("meBox").hidden=true; });
+  el("meSave").addEventListener("click",function(){
+    myName=el("meName").value.trim().slice(0,40);
+    try{ localStorage.setItem("crt.name",myName); }catch(e){}
+    el("meBox").hidden=true; refreshMe();
+  });
+  el("meName").addEventListener("keydown",function(e){ if(e.key==="Enter") el("meSave").click(); });
+  refreshMe();
+
+  /* ---------- boot ---------- */
+  buildControls();
+  render();
+  setSync("","Connecting…");
+
+  if(!window.FIREBASE_CONFIG||!window.FIREBASE_CONFIG.projectId||String(window.FIREBASE_CONFIG.projectId).indexOf("PASTE")===0){
+    setSync("off","Not configured");
+    showNotice("firebase-config.js still has the placeholder config. Paste your Firebase project's config there and reload.");
+    return;
+  }
+  try{
+    var app=FB.initializeApp(window.FIREBASE_CONFIG);
+    db=FB.getFirestore(app);
+  }catch(e){ setSync("off","Config error"); showNotice("Firebase couldn't start: "+(e&&e.message||e)); return; }
+
+  var seenDefinitive=false;
+  FB.onSnapshot(FB.collection(db,"clients"),function(snap){
+    var focusedId=selected;
+    clients=new Map();
+    snap.forEach(function(d){ clients.set(d.id,Object.assign({},d.data()||{})); });
+    var cached=snap.metadata&&snap.metadata.fromCache;
+    if(!cached) seenDefinitive=true;
+    setSync(cached&&!seenDefinitive?"busy":"live", cached&&!seenDefinitive?"Catching up…":"Live — synced across devices");
+    render();
+    if(focusedId&&clients.has(focusedId)){ selected=focusedId; syncDrawer(); }
+    else if(focusedId){ close(); }
+  },function(e){
+    setSync("off","Sync stopped");
+    showNotice(e&&e.code==="permission-denied"?"The database rules block reading. Publish the rules from the README in Firebase → Firestore → Rules."
+      :"The live connection dropped. Reload the page to reconnect — nothing already saved is lost.");
+  });
+  if(!myName){ setTimeout(openMe,600); }
+
+  /* ---------- outreach log: entries written by the daily email task ---------- */
+  var OUT_FIELDS=["outreachStage","emailsSent","firstEmailDate","lastEmailDate","emailSubject","leadSource","researchNotes"];
+  function slug(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60); }
+  function findExisting(e){
+    var em=String(e.email||"").toLowerCase(), co=norm(e.company);
+    var hit=null;
+    clients.forEach(function(c,id){
+      if(hit) return;
+      if(em&&String(c.email||"").toLowerCase()===em) hit=id;
+      else if(co&&norm(c.company)===co) hit=id;
+    });
+    return hit;
+  }
+  function syncOutreach(){
+    if(!db||canWrite===false) return;
+    fetch("outreach-log.json?v="+Date.now(),{cache:"no-store"}).then(function(r){ return r.ok?r.json():null; }).then(function(j){
+      if(!j||!Array.isArray(j.entries)||!j.entries.length) return;
+      var wrote=0;
+      j.entries.forEach(function(e){
+        if(!e||!e.company||!e.id) return;
+        var rev=Number(e.rev)||1;
+        var id=findExisting(e)||("out-"+slug(e.id));
+        var cur=clients.get(id);
+        var now=new Date().toISOString();
+        if(cur){
+          if((Number(cur.outreachLogRev)||0)>=rev) return;
+          var f={outreachLogRev:rev,updatedAt:now,updatedByName:"Email task"};
+          OUT_FIELDS.forEach(function(k){ if(e[k]!=null&&e[k]!=="") f[k]=e[k]; });
+          if(e.followUp) f.followUp=e.followUp;
+          if(e.response) f.response=e.response;
+          if(e.status&&(cur.status==="New"||!cur.status)) f.status=e.status;
+          if(e.noteAppend) f.notes=(cur.notes?cur.notes+"\n":"")+e.noteAppend;
+          FB.setDoc(FB.doc(db,"clients",id),f,{merge:true}).catch(function(){}); wrote++;
+        } else {
+          var b=blank();
+          b.name=e.name||""; b.company=e.company; b.city=e.city||""; b.email=e.email||""; b.phone=e.phone||"";
+          b.products=Array.isArray(e.products)?e.products:[]; b.priority=e.priority||"";
+          b.status=e.status||"Ongoing"; b.potential=Number(e.potential)||0; b.response=e.response||"Awaiting reply";
+          b.followUp=e.followUp||""; b.notes=e.notes||"";
+          OUT_FIELDS.forEach(function(k){ if(e[k]!=null) b[k]=e[k]; });
+          b.outreachLogRev=rev; b.updatedByName="Email task"; b.updatedBy="email-task"; b.createdAt=now; b.updatedAt=now;
+          clients.set(id,b);
+          FB.setDoc(FB.doc(db,"clients",id),b,{merge:true}).catch(function(){}); wrote++;
+        }
+      });
+      if(wrote) render();
+    }).catch(function(){});
+  }
+  var firstSnap=true;
+  var _sync=setInterval(function(){ if(seenDefinitive){ clearInterval(_sync); syncOutreach(); setInterval(syncOutreach,300000); } },800);
+})();
+}
+if(window.FB) startTracker(); else window.addEventListener("fb-ready",startTracker,{once:true});
+</script>
 </body>
 </html>
