@@ -1,13 +1,13 @@
 {
- "checked_at": "2026-11-19T01:12:10+00:00",
+ "checked_at": "2026-11-19T08:48:11+00:00",
  "spot_live": true,
  "spot_source": "api.fxratesapi.com",
- "spot_as_of": "2026-11-19T01:12:00.000Z",
+ "spot_as_of": "2026-11-19T08:47:00.000Z",
  "spot_usd_base": {
-  "EUR": 0.9109381755,
-  "GBP": 0.7603351087,
-  "JPY": 159.419025075,
-  "INR": 93.4338134731
+  "EUR": 0.9102781119,
+  "GBP": 0.7603181313,
+  "JPY": 159.769018862,
+  "INR": 93.2540167796
  },
  "quotes_are_real": false,
  "quotes_as_of": "sample",
@@ -15,64 +15,64 @@
  "rows": [
   {
    "pair": "EUR/USD",
-   "spot": 1.0977693403299464,
+   "spot": 1.0985653581329402,
    "forward_points": 0.004942,
-   "market_forward": 1.1027113403299464,
-   "fair_forward": 1.1021846533931903,
-   "gap_bp": 18.98027751672595,
-   "net_bp": 8.959527188027897,
+   "market_forward": 1.1035073581329402,
+   "fair_forward": 1.102983872841261,
+   "gap_bp": 18.851230005511095,
+   "net_bp": 8.831743593948215,
    "direction": "borrow_quote",
    "opportunity": true,
    "flags": []
   },
   {
    "pair": "GBP/USD",
-   "spot": 1.3152095550470797,
+   "spot": 1.3152389228048387,
    "forward_points": 0.000509,
-   "market_forward": 1.3157185550470798,
-   "fair_forward": 1.3157059368124127,
-   "gap_bp": 0.37954629206668195,
-   "net_bp": -9.262810604407857,
+   "market_forward": 1.3157479228048388,
+   "fair_forward": 1.3157353156540474,
+   "gap_bp": 0.3792044306640667,
+   "net_bp": -9.263104756477592,
    "direction": "borrow_quote",
    "opportunity": false,
    "flags": []
   },
   {
    "pair": "USD/JPY",
-   "spot": 159.419025075,
+   "spot": 159.769018862,
    "forward_points": -1.098,
-   "market_forward": 158.321025075,
-   "fair_forward": 158.32138487929598,
-   "gap_bp": -0.08928680938862917,
-   "net_bp": -9.206273581722392,
-   "direction": "borrow_base",
+   "market_forward": 158.67101886199998,
+   "fair_forward": 158.66896887079838,
+   "gap_bp": 0.5075987422847058,
+   "net_bp": -8.739881827187043,
+   "direction": "borrow_quote",
    "opportunity": false,
    "flags": []
   },
   {
    "pair": "USD/INR",
-   "spot": 93.4338134731,
+   "spot": 93.2540167796,
    "forward_points": 0.6166,
-   "market_forward": 94.05041347310001,
-   "fair_forward": 93.79080143006702,
-   "gap_bp": 111.44798794127294,
-   "net_bp": -87.70363549544923,
+   "market_forward": 93.8706167796,
+   "fair_forward": 93.61031777697607,
+   "gap_bp": 111.9583343593146,
+   "net_bp": -87.20577692474735,
    "direction": "borrow_quote",
    "opportunity": false,
    "flags": [
-    "RED FLAG: annualised mispricing of +111.4 bp is far larger than what survives in liquid FX. Suspect mismatched tenors, wrong day-count, stale spot, or (for INR-type pairs) capital controls / onshore-offshore segmentation."
+    "RED FLAG: annualised mispricing of +112.0 bp is far larger than what survives in liquid FX. Suspect mismatched tenors, wrong day-count, stale spot, or (for INR-type pairs) capital controls / onshore-offshore segmentation."
    ]
   }
  ],
  "alerts": [
   {
    "pair": "EUR/USD",
-   "spot": 1.0977693403299464,
+   "spot": 1.0985653581329402,
    "forward_points": 0.004942,
-   "market_forward": 1.1027113403299464,
-   "fair_forward": 1.1021846533931903,
-   "gap_bp": 18.98027751672595,
-   "net_bp": 8.959527188027897,
+   "market_forward": 1.1035073581329402,
+   "fair_forward": 1.102983872841261,
+   "gap_bp": 18.851230005511095,
+   "net_bp": 8.831743593948215,
    "direction": "borrow_quote",
    "opportunity": true,
    "flags": []
